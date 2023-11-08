@@ -1,22 +1,31 @@
 package org.example.ExpenseTrackerBot.service;
 
 import org.example.ExpenseTrackerBot.config.BotConfig;
+import org.example.ExpenseTrackerBot.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.sql.Date;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Component
 public class ExpenseTrackerBot extends TelegramLongPollingBot {
+    @Autowired
+    private ExpenseRepository expenseRepository;
+    @Autowired
+    private UserRepository userRepository;
     private final BotConfig config;
     static final String HELP_MESSAGE = """
             I can help you to track your expanses
@@ -64,6 +73,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
 
             switch (msgText) {
                 case "/start":
+                    registerUser(update.getMessage());
                     startCommandReceived(chatId, update.getMessage().getFrom().getFirstName());
                     break;
                 case "/help":
@@ -73,6 +83,34 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
                     sendMessage(chatId, "Command is not supported");
             }
 
+        }
+    }
+
+    private void addExpense(long chatId) {
+        if (userRepository.findById(chatId).isPresent()) {
+            Expense expense = new Expense();
+            expense.setId(chatId);
+            expense.setCategory(ExpenseCategory.CAFE);
+            expense.setCurrency(Currency.VND);
+            expense.setPrice(120);
+            expense.setUser(userRepository.findById(chatId).get());
+            expense.setDate(new Date(System.currentTimeMillis()));
+
+            expenseRepository.save(expense);
+        }
+    }
+
+    private void registerUser(Message message) {
+        if (userRepository.findById(message.getChatId()).isEmpty()) {
+            User user = new User();
+            user.setId(message.getChatId());
+            user.setFirstName(message.getChat().getFirstName());
+            user.setLastName(message.getChat().getLastName());
+            user.setUserName(message.getChat().getUserName());
+            user.setRegisteredAt(LocalDateTime.now());
+
+            userRepository.save(user);
+            log.info("New User saved: " + user);
         }
     }
 
