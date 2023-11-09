@@ -9,7 +9,7 @@ public enum ExpenseCategory {
     SUPERMARKET,
     GROCERY,
     CAFE,
-    TAXI,
+    TRAVEL,
     FOOD_DELIVERY,
     MARKETPLACE,
     OTHER
