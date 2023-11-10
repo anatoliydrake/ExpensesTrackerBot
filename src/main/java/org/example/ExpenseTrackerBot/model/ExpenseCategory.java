@@ -12,6 +12,6 @@ public enum ExpenseCategory {
     TRAVEL,
     FOOD_DELIVERY,
     MARKETPLACE,
-    OTHER
+    HEALTH
 }
 
