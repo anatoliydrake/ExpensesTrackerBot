@@ -31,7 +31,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
     static final String HELP_MESSAGE = """
             I can help you to track your expanses:blush:
 
-            You can control me by sending these commands::
+            You can control me by sending these commands:
 
             /add - add new expense
             /help - get info how to use this bot
@@ -61,9 +61,8 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
     private final Set<String> currencySet;
     private static final Logger log = LoggerFactory.getLogger(ExpenseTrackerBot.class);
     private final Expense expense;
-    private String lastUpdateData;
+    private String lastCallbackData;
     private Message lastBotMessage;
-    private Message lastUserMessage;
 
     public ExpenseTrackerBot(BotConfig config) {
         this.config = config;
@@ -80,8 +79,6 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         Arrays.stream(Currency.values()).forEach(c -> currencySet.add(c.name()));
 
         expense = new Expense();
-        lastBotMessage = new Message();
-        lastUserMessage = new Message();
 
         try {
             this.execute(new SetMyCommands(commands, new BotCommandScopeDefault(), null));
@@ -104,75 +101,86 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
 
         if (update.hasMessage() && update.getMessage().hasText()) {
-            lastUserMessage = update.getMessage();
             String msgText = update.getMessage().getText();
             log.info("Received message \"" + msgText + "\" from @" + update.getMessage().getFrom().getUserName());
 
             long chatId = update.getMessage().getChatId();
-
+            int messageId = update.getMessage().getMessageId();
+            deleteMessage(chatId, messageId);
             switch (msgText) {
                 case "/start":
                     registerUser(update.getMessage());
                     sendMessage(chatId, EmojiParser.parseToUnicode(HELP_MESSAGE), null);
+                    lastBotMessage = null;
                     break;
                 case "/add":
+                    if (lastBotMessage != null) {
+                        deleteMessage(lastBotMessage.getChatId(), lastBotMessage.getMessageId());
+                    }
                     sendMessage(chatId, "Choose expense category", categoryMarkup);
                     break;
                 case "/help":
-                    sendMessage(chatId, HELP_MESSAGE, null);
+                    if (lastBotMessage != null) {
+                        deleteMessage(lastBotMessage.getChatId(), lastBotMessage.getMessageId());
+                    }
+                    sendMessage(chatId, EmojiParser.parseToUnicode(HELP_MESSAGE), null);
+                    lastBotMessage = null;
                     break;
                 default:
-                    if (currencySet.contains(lastUpdateData)) {
+                    if (currencySet.contains(lastCallbackData) && lastBotMessage != null) {
                         try {
                             expense.setPrice(Double.parseDouble(msgText));
                         } catch (NumberFormatException e) {
                             log.error(e.getMessage());
-                            sendMessage(chatId, "Incorrect input. Please, use numbers", null);
+                            updateMessage(chatId, lastBotMessage.getMessageId(),
+                                    "Category: " + expense.getCategory() + "\nCurrency: " + expense.getCurrency() + "\nIncorrect input. Please, use numbers",
+                                    null);
                             return;
                         }
-
-                        addExpense(chatId);
+                        addExpense(chatId, lastBotMessage.getMessageId());
+                        lastBotMessage = null;
                     }
             }
 
         } else if (update.hasCallbackQuery()) {
-            lastUpdateData = update.getCallbackQuery().getData();
+            lastCallbackData = update.getCallbackQuery().getData();
             String callbackText = update.getCallbackQuery().getData();
-            log.info("Received callback \"" + callbackText + "\" from @" + update.getCallbackQuery().getFrom().getUserName());
-            long chatId = update.getCallbackQuery().getFrom().getId();
+            log.info("Clicked button \"" + callbackText + "\" by @" + update.getCallbackQuery().getFrom().getUserName());
+            long chatId = update.getCallbackQuery().getMessage().getChatId();
+            int messageId = update.getCallbackQuery().getMessage().getMessageId();
 
             if (callbackText.equals("cur_back")) {
-                updateMessage(chatId, "Choose expense category", categoryMarkup);
+                updateMessage(chatId, messageId, "Choose expense category", categoryMarkup);
                 return;
             }
             if (categorySet.contains(callbackText)) {
-                updateMessage(chatId, "Category: " + callbackText + "\nPlease choose currency", currencyMarkup);
+                updateMessage(chatId, messageId, "Category: " + callbackText + "\nPlease choose currency", currencyMarkup);
                 expense.setCategory(ExpenseCategory.valueOf(callbackText));
                 return;
             }
             if (currencySet.contains(callbackText)) {
                 expense.setCurrency(Currency.valueOf(callbackText));
-                updateMessage(chatId, "Category: " + expense.getCategory() + "\nCurrency: " + callbackText + "\nPlease enter sum", null);
+                lastBotMessage = update.getCallbackQuery().getMessage();
+                updateMessage(chatId, messageId, "Category: " + expense.getCategory() + "\nCurrency: " + callbackText + "\nPlease enter sum", null);
             }
         }
     }
 
-    private void addExpense(long chatId) {
+    private void addExpense(long chatId, int messageId) {
         if (userRepository.findById(chatId).isPresent()) {
             expense.setId(chatId);
             expense.setUser(userRepository.findById(chatId).get());
             expense.setDate(new Date(System.currentTimeMillis()));
             expenseRepository.save(expense);
-            updateMessage(chatId, "Spent " + expense.getPrice() + " "
+            updateMessage(chatId, messageId, expense.getPrice() + " "
                     + expense.getCurrency() + " on " + expense.getCategory(), null);
-            deleteUserMessage(lastUserMessage);
         }
     }
 
-    private void deleteUserMessage(Message message) {
+    private void deleteMessage(long chatId, int messageId) {
         DeleteMessage deleteMessage = new DeleteMessage();
-        deleteMessage.setChatId(message.getChatId());
-        deleteMessage.setMessageId(message.getMessageId());
+        deleteMessage.setChatId(chatId);
+        deleteMessage.setMessageId(messageId);
         try {
             execute(deleteMessage);
         } catch (TelegramApiException e) {
@@ -209,10 +217,10 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         log.info("Replied to user \"" + textToSend + "\"");
     }
 
-    private void updateMessage(long chatId, String textToSend, InlineKeyboardMarkup keyboardMarkup) {
+    private void updateMessage(long chatId, int messageId, String textToSend, InlineKeyboardMarkup keyboardMarkup) {
         EditMessageText newMessage = new EditMessageText();
         newMessage.setChatId(chatId);
-        newMessage.setMessageId(lastBotMessage.getMessageId());
+        newMessage.setMessageId(messageId);
         newMessage.setText(textToSend);
         newMessage.setReplyMarkup(keyboardMarkup);
         try {
