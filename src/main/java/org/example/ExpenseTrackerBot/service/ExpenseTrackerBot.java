@@ -68,6 +68,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         this.config = config;
         List<BotCommand> commands = new ArrayList<>();
         commands.add(new BotCommand("/add", "add new expense"));
+        commands.add(new BotCommand("/delete", "delete a replied expense"));
         commands.add(new BotCommand("/help", "get info how to use this bot"));
 
         categoryMarkup = getCategoryMarkup();
@@ -102,10 +103,10 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
 
         if (update.hasMessage() && update.getMessage().hasText()) {
             String msgText = update.getMessage().getText();
-            log.info("Received message \"" + msgText + "\" from @" + update.getMessage().getFrom().getUserName());
-
             long chatId = update.getMessage().getChatId();
             int messageId = update.getMessage().getMessageId();
+            String replyMessage = update.getMessage().getReplyToMessage() == null ? " " : " as a reply to message " + update.getMessage().getReplyToMessage().getMessageId();
+            log.info("Received message \"" + msgText + "\"" + replyMessage + " from " + chatId);
             deleteMessage(chatId, messageId);
             switch (msgText) {
                 case "/start":
@@ -126,6 +127,11 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
                     sendMessage(chatId, EmojiParser.parseToUnicode(HELP_MESSAGE), null);
                     lastBotMessage = null;
                     break;
+                case "/delete":
+                    if (update.getMessage().getReplyToMessage().getMessageId() != null) {
+                        deleteExpense(chatId, update.getMessage().getReplyToMessage().getMessageId());
+                    }
+                    break;
                 default:
                     if (currencySet.contains(lastCallbackData) && lastBotMessage != null) {
                         try {
@@ -145,9 +151,9 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         } else if (update.hasCallbackQuery()) {
             lastCallbackData = update.getCallbackQuery().getData();
             String callbackText = update.getCallbackQuery().getData();
-            log.info("Clicked button \"" + callbackText + "\" by @" + update.getCallbackQuery().getFrom().getUserName());
             long chatId = update.getCallbackQuery().getMessage().getChatId();
             int messageId = update.getCallbackQuery().getMessage().getMessageId();
+            log.info("Clicked button \"" + callbackText + "\" by " + chatId);
 
             if (callbackText.equals("cur_back")) {
                 updateMessage(chatId, messageId, "Choose expense category", categoryMarkup);
@@ -166,14 +172,25 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         }
     }
 
+    private void deleteExpense(long chatId, int messageId) {
+        Expense expenseToDelete = expenseRepository.findByUserIdAndMessageId(chatId, messageId);
+        if (expenseToDelete != null) {
+            expenseRepository.delete(expenseToDelete);
+            deleteMessage(chatId, messageId);
+            log.info("Deleted " + expenseToDelete);
+        }
+    }
+
     private void addExpense(long chatId, int messageId) {
         if (userRepository.findById(chatId).isPresent()) {
             expense.setId(chatId);
             expense.setUser(userRepository.findById(chatId).get());
             expense.setDate(new Date(System.currentTimeMillis()));
+            expense.setMessageId(messageId);
             expenseRepository.save(expense);
             updateMessage(chatId, messageId, expense.getPrice() + " "
                     + expense.getCurrency() + " on " + expense.getCategory(), null);
+            log.info("Added new " + expense);
         }
     }
 
@@ -214,7 +231,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             log.error("sendMessage() error occurred: " + e.getMessage());
         }
-        log.info("Replied to user \"" + textToSend + "\"");
+        log.info("Replied \"" + textToSend + "\" to " + chatId);
     }
 
     private void updateMessage(long chatId, int messageId, String textToSend, InlineKeyboardMarkup keyboardMarkup) {

@@ -9,7 +9,7 @@ public class Expense {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     private User user;
     @Enumerated(EnumType.STRING)
     private ExpenseCategory category;
@@ -17,6 +17,7 @@ public class Expense {
     private Currency currency;
     private double price;
     private Date date;
+    private int messageId;
 
     public Long getId() {
         return id;
@@ -64,5 +65,24 @@ public class Expense {
 
     public void setDate(Date date) {
         this.date = date;
+    }
+
+    public int getMessageId() {
+        return messageId;
+    }
+
+    public void setMessageId(int messageId) {
+        this.messageId = messageId;
+    }
+
+    @Override
+    public String toString() {
+        return "Expense{" +
+                "id=" + id +
+                ", user=" + user.getId() +
+                ", category=" + category +
+                ", currency=" + currency +
+                ", price=" + price +
+                '}';
     }
 }
