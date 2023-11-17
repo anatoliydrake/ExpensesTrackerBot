@@ -2,7 +2,7 @@ package org.example.ExpenseTrackerBot.model;
 
 import jakarta.persistence.*;
 
-import java.sql.Date;
+import java.time.LocalDate;
 
 @Entity(name = "Expenses")
 public class Expense {
@@ -16,7 +16,7 @@ public class Expense {
     @Enumerated(EnumType.STRING)
     private Currency currency;
     private double price;
-    private Date date;
+    private LocalDate date;
     private int messageId;
 
     public Long getId() {
@@ -59,11 +59,11 @@ public class Expense {
         this.price = price;
     }
 
-    public Date getDate() {
+    public LocalDate getDate() {
         return date;
     }
 
-    public void setDate(Date date) {
+    public void setDate(LocalDate date) {
         this.date = date;
     }
 
