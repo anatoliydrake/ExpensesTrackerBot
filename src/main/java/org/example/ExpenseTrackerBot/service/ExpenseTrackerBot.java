@@ -29,7 +29,7 @@ import java.util.*;
 
 @Component
 public class ExpenseTrackerBot extends TelegramLongPollingBot {
-    static final String HELP_MESSAGE = """
+    private static final String HELP_MESSAGE = """
             I can help you to track your expanses:blush:
 
             You can control me by sending these commands:
@@ -58,6 +58,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
     private final BotConfig config;
     private final InlineKeyboardMarkup addCategoryMarkup;
     private final InlineKeyboardMarkup addCurrencyMarkup;
+    private final InlineKeyboardMarkup addPriceMarkup;
     private final InlineKeyboardMarkup updateCategoryMarkup;
     private final InlineKeyboardMarkup updateCurrencyMarkup;
     private final InlineKeyboardMarkup updatePropertyMarkup;
@@ -85,6 +86,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
 
         addCategoryMarkup = getCategoryMarkup(BotCommandPrefix.ADD, false);
         addCurrencyMarkup = getCurrencyMarkup(BotCommandPrefix.ADD, true);
+        addPriceMarkup = getPriceMarkup(BotCommandPrefix.ADD);
         updateCategoryMarkup = getCategoryMarkup(BotCommandPrefix.UPDATE, true);
         updateCurrencyMarkup = getCurrencyMarkup(BotCommandPrefix.UPDATE, true);
         updatePropertyMarkup = getUpdatePropertyMarkup();
@@ -199,11 +201,14 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
                 }
                 if (currencySet.contains(lastCallbackData)) {
                     expense.setCurrency(Currency.valueOf(lastCallbackData));
-                    updateMessage(chatId, messageId, "Category: " + expense.getCategory() + "\nCurrency: " + lastCallbackData + "\nPlease enter sum", null);
+                    updateMessage(chatId, messageId, "Category: " + expense.getCategory() + "\nCurrency: " + lastCallbackData + "\nPlease enter sum", addPriceMarkup);
                     return;
                 }
                 if (lastCallbackData.equals("currency_back")) {
                     updateMessage(chatId, messageId, "Please choose expense category", addCategoryMarkup);
+                }
+                if (lastCallbackData.equals("price_back")) {
+                    updateMessage(chatId, messageId, "Category: " + expense.getCategory() + "\nPlease choose currency", addCurrencyMarkup);
                 }
             }
 
@@ -256,27 +261,18 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
                 if (monthSet.contains(lastCallbackData)) {
                     int newMonth = Month.valueOf(lastCallbackData).ordinal() + 1;
                     int oldMonth = expense.getDate().getMonth().getValue();
-                    expense.setDate(expense.getDate().minusMonths((oldMonth  - newMonth + 12) % 12));
+                    //TODO change month updating logic to be able to choose future month
+                    expense.setDate(expense.getDate().minusMonths((oldMonth - newMonth + 12) % 12));
                     expenseRepository.save(expense);
                     String[] lines = currentBotMessage.getText().split("\n");
-                    updateMessage(chatId, messageId, lines[0], null);
+                    updateMessage(chatId, messageId, lines[0] + " in " + expense.getDate().getMonth(), null);
+                    return;
                 }
                 if (lastCallbackData.endsWith("_back")) {
                     String[] lines = currentBotMessage.getText().split("\n");
                     updateMessage(chatId, messageId, lines[0] + "\nChoose property to update", updatePropertyMarkup);
                 }
             }
-        }
-    }
-
-    private void deleteExpense(long chatId, int messageId) {
-        Expense expenseToDelete = expenseRepository.findByUserIdAndMessageId(chatId, messageId);
-        if (expenseToDelete == null) {
-            log.error("Can't be deleted. Forwarded message " + messageId + " by user " + chatId + " doesn't contain an expense");
-        } else {
-            expenseRepository.delete(expenseToDelete);
-            deleteMessage(chatId, messageId);
-            log.info("Deleted " + expenseToDelete);
         }
     }
 
@@ -293,28 +289,14 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         }
     }
 
-    private void deleteMessage(long chatId, int messageId) {
-        DeleteMessage deleteMessage = new DeleteMessage();
-        deleteMessage.setChatId(chatId);
-        deleteMessage.setMessageId(messageId);
-        try {
-            execute(deleteMessage);
-        } catch (TelegramApiException e) {
-            log.error(e.getMessage());
-        }
-    }
-
-    private void registerUser(Message message) {
-        if (userRepository.findById(message.getChatId()).isEmpty()) {
-            User user = new User();
-            user.setId(message.getChatId());
-            user.setFirstName(message.getChat().getFirstName());
-            user.setLastName(message.getChat().getLastName());
-            user.setUserName(message.getChat().getUserName());
-            user.setRegisteredAt(LocalDateTime.now());
-
-            userRepository.save(user);
-            log.info("New User saved: " + user);
+    private void deleteExpense(long chatId, int messageId) {
+        Expense expenseToDelete = expenseRepository.findByUserIdAndMessageId(chatId, messageId);
+        if (expenseToDelete == null) {
+            log.error("Can't be deleted. Forwarded message " + messageId + " by user " + chatId + " doesn't contain an expense");
+        } else {
+            expenseRepository.delete(expenseToDelete);
+            deleteMessage(chatId, messageId);
+            log.info("Deleted " + expenseToDelete);
         }
     }
 
@@ -346,11 +328,38 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         }
     }
 
+    private void deleteMessage(long chatId, int messageId) {
+        DeleteMessage deleteMessage = new DeleteMessage();
+        deleteMessage.setChatId(chatId);
+        deleteMessage.setMessageId(messageId);
+        try {
+            execute(deleteMessage);
+        } catch (TelegramApiException e) {
+            updateMessage(chatId, messageId, "DELETED", null);
+            log.error(e.getMessage());
+        }
+    }
+
+    private void registerUser(Message message) {
+        if (userRepository.findById(message.getChatId()).isEmpty()) {
+            User user = new User();
+            user.setId(message.getChatId());
+            user.setFirstName(message.getChat().getFirstName());
+            user.setLastName(message.getChat().getLastName());
+            user.setUserName(message.getChat().getUserName());
+            user.setRegisteredAt(LocalDateTime.now());
+
+            userRepository.save(user);
+            log.info("New User saved: " + user);
+        }
+    }
+
     private InlineKeyboardMarkup getCategoryMarkup(BotCommandPrefix command, boolean hasBackButton) {
         String prefix = command + "_";
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
+        //TODO button text getting from category enum / put emoji inside enum
         row.add(InlineKeyboardButton.builder()
                 .text(EmojiParser.parseToUnicode(":house::hotel:"))
                 .callbackData(prefix + ExpenseCategory.RENT.name()).build());
@@ -428,6 +437,21 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         return keyboardMarkup;
     }
 
+    private InlineKeyboardMarkup getPriceMarkup(BotCommandPrefix command) {
+        String prefix = command + "_";
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        //TODO put all the callbacks to enum
+        row.add(InlineKeyboardButton.builder()
+                .text(EmojiParser.parseToUnicode("Back"))
+                .callbackData(prefix + "price_back").build());
+        keyboardRows.add(row);
+
+        keyboardMarkup.setKeyboard(keyboardRows);
+        return keyboardMarkup;
+    }
+
     private InlineKeyboardMarkup getUpdatePropertyMarkup() {
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
@@ -455,6 +479,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         String prefix = "UPDATE_";
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
+        //TODO put rows to markup using cycle
         List<InlineKeyboardButton> row = new ArrayList<>();
         row.add(InlineKeyboardButton.builder().text("JAN").callbackData(prefix + Month.JANUARY.name()).build());
         row.add(InlineKeyboardButton.builder().text("FEB").callbackData(prefix + Month.FEBRUARY.name()).build());
@@ -463,7 +488,6 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         row.add(InlineKeyboardButton.builder().text("MAY").callbackData(prefix + Month.MAY.name()).build());
         row.add(InlineKeyboardButton.builder().text("JUN").callbackData(prefix + Month.JUNE.name()).build());
         keyboardRows.add(row);
-
 
         row = new ArrayList<>();
         row.add(InlineKeyboardButton.builder().text("JUL").callbackData(prefix + Month.JULY.name()).build());
