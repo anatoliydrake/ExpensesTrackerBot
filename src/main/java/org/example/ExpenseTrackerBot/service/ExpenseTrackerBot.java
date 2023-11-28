@@ -1,6 +1,7 @@
 package org.example.ExpenseTrackerBot.service;
 
 import com.vdurmont.emoji.EmojiParser;
+import org.example.ExpenseTrackerBot.commands.IBotCommand;
 import org.example.ExpenseTrackerBot.config.BotConfig;
 import org.example.ExpenseTrackerBot.model.*;
 import org.example.ExpenseTrackerBot.model.Currency;
@@ -9,53 +10,30 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
-import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.bots.AbsSender;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.Month;
 import java.util.*;
 
+//TODO Singleton
 @Component
 public class ExpenseTrackerBot extends TelegramLongPollingBot {
-    private static final String HELP_MESSAGE = """
-            I can help you to track your expanses:blush:
-
-            You can control me by sending these commands:
-
-            /add - add new expense
-            /help - get info how to use this bot
-                        
-            <b>Expense categories:</b>
-            :house::hotel: - rent
-            :bulb::potable_water: - utilities
-            :earth_americas:\uD83E\uDEAA - visa
-            \uD83E\uDEAA:runner: - visarun
-            :hospital::woman_health_worker: - healthcare
-            :airplane::taxi: - travel
-            :pizza::motor_scooter: - food delivery
-            :nail_care::hammer_and_wrench: - services
-            :shopping_cart::couple: - supermarket
-            :green_apple::leafy_green: - grocery
-            \uD83D\uDECD️:computer: - marketplace
-            :coffee:\uD83C\uDF7D️ - cafe
-            """;
+    private static String HELP_MESSAGE;
     @Autowired
     private ExpenseRepository expenseRepository;
     @Autowired
     private UserRepository userRepository;
     private final BotConfig config;
+    private final Map<String, IBotCommand> commandMap;
     private final InlineKeyboardMarkup addCategoryMarkup;
     private final InlineKeyboardMarkup addCurrencyMarkup;
     private final InlineKeyboardMarkup addPriceMarkup;
@@ -67,22 +45,16 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
     private final Set<String> currencySet;
     private final Set<String> monthSet;
     private static final Logger log = LoggerFactory.getLogger(ExpenseTrackerBot.class);
-    private Expense expense;
+    public static Expense expense;
     private String lastCallbackData;
-    private Message currentBotMessage;
+    public static Message currentBotMessage;
 
-    public ExpenseTrackerBot(BotConfig config) {
+    public ExpenseTrackerBot(BotConfig config, List<IBotCommand> commands) {
+        super(config.getBotToken());
         this.config = config;
-        List<BotCommand> commands = new ArrayList<>();
-        commands.add(new BotCommand("/add", "add new expense"));
-        commands.add(new BotCommand("/update", "update an expense property"));
-        commands.add(new BotCommand("/delete", "delete a replied expense"));
-        commands.add(new BotCommand("/help", "get info how to use this bot"));
-        try {
-            this.execute(new SetMyCommands(commands, new BotCommandScopeDefault(), null));
-        } catch (TelegramApiException e) {
-            log.error("Error setting Bot command list: " + e.getMessage());
-        }
+        commandMap = new HashMap<>();
+        commands.forEach(c -> commandMap.put(c.getCommandIdentifier(), c));
+        HELP_MESSAGE = getHelpMessage(commands);
 
         addCategoryMarkup = getCategoryMarkup(BotCommandPrefix.ADD, false);
         addCurrencyMarkup = getCurrencyMarkup(BotCommandPrefix.ADD, true);
@@ -106,82 +78,25 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
     }
 
     @Override
-    public String getBotToken() {
-        return config.getBotToken();
+    public void onUpdateReceived(Update update) {
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            Message message = update.getMessage();
+            Message replyMessage = message.getReplyToMessage();
+            String reply = replyMessage == null ? "" : " as a reply to message " + replyMessage.getMessageId();
+            log.info("Received message \"" + message.getText() + "\"" + reply + " from " + message.getChatId());
+            deleteMessage(message.getChatId(), message.getMessageId());
+            if (message.isCommand()) {
+                executeCommand(this, update);
+            } else {
+                handleUserTextMessage(message.getText(), message.getChatId());
+            }
+            return;
+        }
+        this.processNonCommandUpdate(update);
     }
 
-    @Override
-    public void onUpdateReceived(Update update) {
-
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            String msgText = update.getMessage().getText();
-            long chatId = update.getMessage().getChatId();
-            int messageId = update.getMessage().getMessageId();
-            String replyMessage = update.getMessage().getReplyToMessage() == null ? "" : "as a reply to message " + update.getMessage().getReplyToMessage().getMessageId();
-            log.info("Received message \"" + msgText + "\" " + replyMessage + " from " + chatId);
-            deleteMessage(chatId, messageId);
-            switch (msgText) {
-                case "/start":
-                    registerUser(update.getMessage());
-                    sendMessage(chatId, EmojiParser.parseToUnicode(HELP_MESSAGE), null);
-                    currentBotMessage = null;
-                    break;
-                case "/add":
-                    if (currentBotMessage != null) {
-                        deleteMessage(currentBotMessage.getChatId(), currentBotMessage.getMessageId());
-                    }
-                    sendMessage(chatId, "Please choose expense category", addCategoryMarkup);
-                    expense = new Expense();
-                    break;
-                case "/update":
-                    if (update.getMessage().getReplyToMessage().getMessageId() != null) {
-                        int expenseMessageId = update.getMessage().getReplyToMessage().getMessageId();
-                        expense = expenseRepository.findByUserIdAndMessageId(chatId, expenseMessageId);
-                        if (expense == null) {
-                            log.error("Can't be updated. Forwarded message " + expenseMessageId + " by user " + chatId + " doesn't contain an expense");
-                        } else {
-                            String messageText = update.getMessage().getReplyToMessage().getText();
-                            updateMessage(chatId, expenseMessageId, messageText + "\nChoose property to update", updatePropertyMarkup);
-                        }
-                    }
-                    break;
-                case "/help":
-                    if (currentBotMessage != null) {
-                        deleteMessage(currentBotMessage.getChatId(), currentBotMessage.getMessageId());
-                    }
-                    sendMessage(chatId, EmojiParser.parseToUnicode(HELP_MESSAGE), null);
-                    currentBotMessage = null;
-                    break;
-                case "/delete":
-                    if (update.getMessage().getReplyToMessage().getMessageId() != null) {
-                        deleteExpense(chatId, update.getMessage().getReplyToMessage().getMessageId());
-                    }
-                    break;
-                default:
-                    if (expense != null && currentBotMessage != null) {
-                        try {
-                            expense.setPrice(Double.parseDouble(msgText));
-                        } catch (NumberFormatException e) {
-                            log.error(e.getMessage());
-                            updateMessage(chatId, currentBotMessage.getMessageId(),
-                                    "Category: " + expense.getCategory()
-                                            + "\nCurrency: " + expense.getCurrency()
-                                            + "\nIncorrect input. Please, use numbers",
-                                    null);
-                            return;
-                        }
-                        if (currencySet.contains(lastCallbackData)) {
-                            addExpense(chatId, currentBotMessage.getMessageId());
-                        }
-                        if (lastCallbackData.equals("price")) {
-                            expenseRepository.save(expense);
-                            updateMessage(chatId, currentBotMessage.getMessageId(), expense.getPrice() + " "
-                                    + expense.getCurrency() + " on " + expense.getCategory(), null);
-                        }
-                        currentBotMessage = null;
-                    }
-            }
-        } else if (update.hasCallbackQuery()) {
+    public void processNonCommandUpdate(Update update) {
+        if (update.hasCallbackQuery()) {
             currentBotMessage = update.getCallbackQuery().getMessage();
             lastCallbackData = update.getCallbackQuery().getData();
             long chatId = currentBotMessage.getChatId();
@@ -276,6 +191,35 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         }
     }
 
+    public static String getHelpMessage() {
+        return HELP_MESSAGE;
+    }
+
+    private void handleUserTextMessage(String msgText, long chatId) {
+        if (expense != null && currentBotMessage != null) {
+            try {
+                expense.setPrice(Double.parseDouble(msgText));
+            } catch (NumberFormatException e) {
+                log.error(e.getMessage());
+                updateMessage(chatId, currentBotMessage.getMessageId(),
+                        "Category: " + expense.getCategory()
+                                + "\nCurrency: " + expense.getCurrency()
+                                + "\nIncorrect input. Please, use numbers",
+                        null);
+                return;
+            }
+            if (currencySet.contains(lastCallbackData)) {
+                addExpense(chatId, currentBotMessage.getMessageId());
+            }
+            if (lastCallbackData.equals("price")) {
+                expenseRepository.save(expense);
+                updateMessage(chatId, currentBotMessage.getMessageId(), expense.getPrice() + " "
+                        + expense.getCurrency() + " on " + expense.getCategory(), null);
+            }
+            currentBotMessage = null;
+        }
+    }
+
     private void addExpense(long chatId, int messageId) {
         if (userRepository.findById(chatId).isPresent()) {
             expense.setUser(userRepository.findById(chatId).get());
@@ -287,32 +231,6 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
             log.info("Added new " + expense);
             expense = null;
         }
-    }
-
-    private void deleteExpense(long chatId, int messageId) {
-        Expense expenseToDelete = expenseRepository.findByUserIdAndMessageId(chatId, messageId);
-        if (expenseToDelete == null) {
-            log.error("Can't be deleted. Forwarded message " + messageId + " by user " + chatId + " doesn't contain an expense");
-        } else {
-            expenseRepository.delete(expenseToDelete);
-            deleteMessage(chatId, messageId);
-            log.info("Deleted " + expenseToDelete);
-        }
-    }
-
-    private void sendMessage(long chatId, String textToSend, InlineKeyboardMarkup keyboardMarkup) {
-        SendMessage message = SendMessage.builder()
-                .chatId(chatId)
-                .parseMode("HTML")
-                .text(textToSend)
-                .replyMarkup(keyboardMarkup)
-                .build();
-        try {
-            currentBotMessage = execute(message);
-        } catch (TelegramApiException e) {
-            log.error("sendMessage() error occurred: " + e.getMessage());
-        }
-        log.info("Replied \"" + textToSend + "\" to " + chatId);
     }
 
     private void updateMessage(long chatId, int messageId, String textToSend, InlineKeyboardMarkup keyboardMarkup) {
@@ -337,20 +255,6 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             updateMessage(chatId, messageId, "DELETED", null);
             log.error(e.getMessage());
-        }
-    }
-
-    private void registerUser(Message message) {
-        if (userRepository.findById(message.getChatId()).isEmpty()) {
-            User user = new User();
-            user.setId(message.getChatId());
-            user.setFirstName(message.getChat().getFirstName());
-            user.setLastName(message.getChat().getLastName());
-            user.setUserName(message.getChat().getUserName());
-            user.setRegisteredAt(LocalDateTime.now());
-
-            userRepository.save(user);
-            log.info("New User saved: " + user);
         }
     }
 
@@ -512,6 +416,44 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         ReplyKeyboardRemove remove = new ReplyKeyboardRemove();
         remove.setRemoveKeyboard(true);
         return remove;
+    }
+
+    private void executeCommand(AbsSender absSender, Update update) {
+        Message message = update.getMessage();
+        String text = message.getText();
+        if (text.startsWith("/")) {
+            String commandMessage = text.substring(1);
+            if (this.commandMap.containsKey(commandMessage)) {
+                this.commandMap.get(commandMessage).processMessage(absSender, update);
+            }
+        }
+    }
+
+    private String getHelpMessage(List<IBotCommand> commands) {
+        String header = "I can help you to track your expanses:blush:\n\nYou can control me by sending these commands:\n\n";
+        StringBuilder builder = new StringBuilder(header);
+        commands.stream().filter(IBotCommand::addInHelpMessage).forEach(command -> {
+            builder.append(command);
+            builder.append("\n");
+        });
+        String categories = """
+                
+                <b>Expense categories:</b>
+                :house::hotel: - rent
+                :bulb::potable_water: - utilities
+                :earth_americas:\uD83E\uDEAA - visa
+                \uD83E\uDEAA:runner: - visarun
+                :hospital::woman_health_worker: - healthcare
+                :airplane::taxi: - travel
+                :pizza::motor_scooter: - food delivery
+                :nail_care::hammer_and_wrench: - services
+                :shopping_cart::couple: - supermarket
+                :green_apple::leafy_green: - grocery
+                \uD83D\uDECD️:computer: - marketplace
+                :coffee:\uD83C\uDF7D️ - cafe""";
+        builder.append(categories);
+
+        return builder.toString();
     }
 
 }
