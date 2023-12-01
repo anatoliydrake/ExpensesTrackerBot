@@ -1,5 +1,6 @@
 package org.example.ExpenseTrackerBot.commands;
 
+import org.example.ExpenseTrackerBot.markups.AddCategoryMarkup;
 import org.example.ExpenseTrackerBot.model.Expense;
 import org.example.ExpenseTrackerBot.service.BotService;
 import org.example.ExpenseTrackerBot.service.ExpenseTrackerBot;
@@ -16,10 +17,10 @@ public class AddCommand extends BotCommand {
     @Override
     public void execute(AbsSender absSender, Update update) {
         long chatId = update.getMessage().getChatId();
-        if (ExpenseTrackerBot.currentBotMessage != null) {
-            BotService.deleteMessage(absSender, ExpenseTrackerBot.currentBotMessage.getChatId(), ExpenseTrackerBot.currentBotMessage.getMessageId());
+        if (ExpenseTrackerBot.CURRENT_BOT_MESSAGE != null) {
+            BotService.deleteMessage(absSender, ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getChatId(), ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getMessageId());
         }
-        BotService.sendMessage(absSender, chatId, "Please choose expense category", BotService.addCategoryMarkup);
-        ExpenseTrackerBot.expense = new Expense();
+        BotService.sendMessage(absSender, chatId, "Please choose expense category", AddCategoryMarkup.MARKUP);
+        ExpenseTrackerBot.EXPENSE = new Expense();
     }
 }

@@ -33,7 +33,7 @@ public class StartCommand extends BotCommand {
             log.info("New User saved: " + user);
         }
         BotService.sendMessage(absSender, chatId, EmojiParser.parseToUnicode(ExpenseTrackerBot.getHelpMessage()), null);
-        ExpenseTrackerBot.currentBotMessage = null;
+        ExpenseTrackerBot.CURRENT_BOT_MESSAGE = null;
     }
 
     @Override

@@ -14,7 +14,7 @@ public abstract class BotCommand implements IBotCommand {
     @Autowired
     protected UserRepository userRepository;
     protected final Logger log = LoggerFactory.getLogger(BotCommand.class);
-    private static final String COMMAND_INIT_CHARACTER = "/";
+    public static final String COMMAND_INIT_CHARACTER = "/";
     private static final int COMMAND_MAX_LENGTH = 32;
     private final String commandIdentifier;
     private final String description;

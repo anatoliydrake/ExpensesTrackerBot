@@ -16,10 +16,10 @@ public class HelpCommand extends BotCommand {
     @Override
     public void execute(AbsSender absSender, Update update) {
         long chatId = update.getMessage().getChat().getId();
-        if (ExpenseTrackerBot.currentBotMessage != null) {
-            BotService.deleteMessage(absSender, ExpenseTrackerBot.currentBotMessage.getChatId(), ExpenseTrackerBot.currentBotMessage.getMessageId());
+        if (ExpenseTrackerBot.CURRENT_BOT_MESSAGE != null) {
+            BotService.deleteMessage(absSender, ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getChatId(), ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getMessageId());
         }
         BotService.sendMessage(absSender, chatId, EmojiParser.parseToUnicode(ExpenseTrackerBot.getHelpMessage()), null);
-        ExpenseTrackerBot.currentBotMessage = null;
+        ExpenseTrackerBot.CURRENT_BOT_MESSAGE = null;
     }
 }

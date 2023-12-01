@@ -8,17 +8,23 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.bots.AbsSender;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
 
 public class BotService {
-    public static final InlineKeyboardMarkup addCategoryMarkup = getCategoryMarkup(BotCommandPrefix.ADD, false);
-    public static final InlineKeyboardMarkup updateCategoryMarkup = getCategoryMarkup(BotCommandPrefix.UPDATE, true);
-    public static final InlineKeyboardMarkup updatePropertyMarkup = getUpdatePropertyMarkup();
+    public static final String CALLBACK_DELIMITER = ":";
+    public static final String CATEGORY = "Category";
+    public static final String CURRENCY = "Currency";
+    public static final String PRICE = "Price";
+    public static final String DATE = "Date";
+    public static final String CANCEL = "Cancel";
+    public static final String BACK = "Back";
     private static final Logger log = LoggerFactory.getLogger(BotService.class);
 
     public static void sendMessage(AbsSender absSender, long chatId, String textToSend, InlineKeyboardMarkup keyboardMarkup) {
@@ -29,7 +35,7 @@ public class BotService {
                 .replyMarkup(keyboardMarkup)
                 .build();
         try {
-            ExpenseTrackerBot.currentBotMessage = absSender.execute(message);
+            ExpenseTrackerBot.CURRENT_BOT_MESSAGE = absSender.execute(message);
         } catch (TelegramApiException e) {
             log.error("sendMessage() error occurred: " + e.getMessage());
         }
@@ -61,8 +67,8 @@ public class BotService {
         }
     }
 
-    private static InlineKeyboardMarkup getCategoryMarkup(BotCommandPrefix command, boolean hasBackButton) {
-        String prefix = command + "_";
+    public static InlineKeyboardMarkup getCategoryMarkup(String markupIdentifier, boolean hasBackButton) {
+        String prefix = markupIdentifier + CALLBACK_DELIMITER;
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
@@ -114,8 +120,8 @@ public class BotService {
         if (hasBackButton) {
             row = new ArrayList<>();
             row.add(InlineKeyboardButton.builder()
-                    .text(EmojiParser.parseToUnicode("Back"))
-                    .callbackData(prefix + "category_back").build());
+                    .text(BACK)
+                    .callbackData(prefix + BACK).build());
             keyboardRows.add(row);
         }
 
@@ -123,28 +129,96 @@ public class BotService {
         return keyboardMarkup;
     }
 
-    private static InlineKeyboardMarkup getUpdatePropertyMarkup() {
+    public static InlineKeyboardMarkup getCurrencyMarkup(String markupIdentifier, boolean hasBackButton) {
+        String prefix = markupIdentifier + CALLBACK_DELIMITER;
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder().text("Category").callbackData("UPDATE_category").build());
-        row.add(InlineKeyboardButton.builder().text("Currency").callbackData("UPDATE_currency").build());
+        row.add(InlineKeyboardButton.builder().text(Currency.VND.name()).callbackData(prefix + Currency.VND.name()).build());
+        row.add(InlineKeyboardButton.builder().text(Currency.USD.name()).callbackData(prefix + Currency.USD.name()).build());
         keyboardRows.add(row);
 
-        row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder().text("Price").callbackData("UPDATE_price").build());
-        row.add(InlineKeyboardButton.builder().text("Date").callbackData("UPDATE_date").build());
-        keyboardRows.add(row);
+        if (hasBackButton) {
+            row = new ArrayList<>();
+            row.add(InlineKeyboardButton.builder()
+                    .text(BACK)
+                    .callbackData(prefix + BACK).build());
+            keyboardRows.add(row);
+        }
 
-        row = new ArrayList<>();
+        keyboardMarkup.setKeyboard(keyboardRows);
+        return keyboardMarkup;
+    }
+
+    public static InlineKeyboardMarkup getPriceMarkup(String markupIdentifier) {
+        String prefix = markupIdentifier + CALLBACK_DELIMITER;
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
         row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode("Cancel"))
-                .callbackData("UPDATE_cancel").build());
+                .text(BACK)
+                .callbackData(prefix + BACK).build());
         keyboardRows.add(row);
 
         keyboardMarkup.setKeyboard(keyboardRows);
         return keyboardMarkup;
     }
 
+    public static InlineKeyboardMarkup getPropertyMarkup(String markupIdentifier) {
+        String prefix = markupIdentifier + CALLBACK_DELIMITER;
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(InlineKeyboardButton.builder().text(CATEGORY).callbackData(prefix + CATEGORY).build());
+        row.add(InlineKeyboardButton.builder().text(CURRENCY).callbackData(prefix + CURRENCY).build());
+        keyboardRows.add(row);
 
+        row = new ArrayList<>();
+        row.add(InlineKeyboardButton.builder().text(PRICE).callbackData(prefix + PRICE).build());
+        row.add(InlineKeyboardButton.builder().text(DATE).callbackData(prefix + DATE).build());
+        keyboardRows.add(row);
+
+        row = new ArrayList<>();
+        row.add(InlineKeyboardButton.builder()
+                .text(CANCEL)
+                .callbackData(prefix + CANCEL).build());
+        keyboardRows.add(row);
+
+        keyboardMarkup.setKeyboard(keyboardRows);
+        return keyboardMarkup;
+    }
+
+    public static InlineKeyboardMarkup getMonthMarkup(String markupIdentifier) {
+        String prefix = markupIdentifier + CALLBACK_DELIMITER;
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
+        List<InlineKeyboardButton> row;
+        Month[] months = Month.values();
+        int rowsNumber = 2;
+        int monthInRowCount = months.length / rowsNumber;
+        for (int i = 0; i < rowsNumber; i++) {
+            row = new ArrayList<>();
+            for (int j = 0; j < monthInRowCount; j++) {
+                row.add(InlineKeyboardButton.builder()
+                        .text(months[j + i * monthInRowCount].name().substring(0, 3))
+                        .callbackData(prefix + months[j + i * monthInRowCount]).build());
+            }
+            keyboardRows.add(row);
+        }
+
+        row = new ArrayList<>();
+        row.add(InlineKeyboardButton.builder()
+                .text(BACK)
+                .callbackData(prefix + BACK).build());
+        keyboardRows.add(row);
+
+        keyboardMarkup.setKeyboard(keyboardRows);
+        return keyboardMarkup;
+    }
+
+    public static ReplyKeyboardRemove getRemoveReplyKeyboard() {
+        ReplyKeyboardRemove remove = new ReplyKeyboardRemove();
+        remove.setRemoveKeyboard(true);
+        return remove;
+    }
 }
