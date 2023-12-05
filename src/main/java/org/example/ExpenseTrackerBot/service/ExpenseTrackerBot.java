@@ -1,6 +1,6 @@
 package org.example.ExpenseTrackerBot.service;
 
-import org.example.ExpenseTrackerBot.commands.BotCommand;
+import org.example.ExpenseTrackerBot.commands.ETBotCommand;
 import org.example.ExpenseTrackerBot.config.BotConfig;
 import org.example.ExpenseTrackerBot.markups.BotMarkup;
 import org.example.ExpenseTrackerBot.model.*;
@@ -8,6 +8,7 @@ import org.example.ExpenseTrackerBot.model.Currency;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -16,25 +17,24 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import java.time.LocalDate;
 import java.util.*;
 
-//TODO Singleton
 @Component
+@Scope(value = "singleton")
 public class ExpenseTrackerBot extends TelegramLongPollingBot {
+    public static Expense EXPENSE;
+    public static Message CURRENT_BOT_MESSAGE;
     private static String HELP_MESSAGE;
     @Autowired
     private ExpenseRepository expenseRepository;
     @Autowired
     private UserRepository userRepository;
     private final BotConfig config;
-    private final Map<String, BotCommand> commandMap;
+    private final Map<String, ETBotCommand> commandMap;
     private final Map<String, BotMarkup> markupMap;
     private final Set<String> currencySet;
     private static final Logger log = LoggerFactory.getLogger(ExpenseTrackerBot.class);
-    //TODO encapsulate public static valuables
-    public static Expense EXPENSE;
     private String lastCallbackData;
-    public static Message CURRENT_BOT_MESSAGE;
 
-    public ExpenseTrackerBot(BotConfig config, List<BotCommand> commands, List<BotMarkup> markups) {
+    public ExpenseTrackerBot(BotConfig config, List<ETBotCommand> commands, List<BotMarkup> markups) {
         super(config.getBotToken());
         this.config = config;
         commandMap = new HashMap<>();
@@ -42,6 +42,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         markupMap = new HashMap<>();
         markups.forEach(c -> markupMap.put(c.getMarkupIdentifier(), c));
         HELP_MESSAGE = getHelpMessage(commands);
+        BotService.setMyCommands(this, commands);
 
         currencySet = new HashSet<>();
         Arrays.stream(Currency.values()).forEach(c -> currencySet.add(c.name()));
@@ -87,7 +88,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
                 BotService.updateMessage(this, chatId, CURRENT_BOT_MESSAGE.getMessageId(), textToSend, null);
                 return;
             }
-            if (currencySet.contains(lastCallbackData)) {
+            if (currencySet.contains(lastCallbackData)) { // if previous clicked button was currency
                 addExpense(chatId, CURRENT_BOT_MESSAGE.getMessageId());
             }
             if (lastCallbackData.equals(BotService.PRICE)) {
@@ -115,7 +116,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
     private void processCommand(Update update) {
         Message message = update.getMessage();
         String text = message.getText();
-        if (text.startsWith(BotCommand.COMMAND_INIT_CHARACTER)) {
+        if (text.startsWith(ETBotCommand.COMMAND_INIT_CHARACTER)) {
             String command = text.substring(1);
             if (this.commandMap.containsKey(command)) {
                 this.commandMap.get(command).processMessage(this, update);
@@ -139,10 +140,10 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         }
     }
 
-    private String getHelpMessage(List<BotCommand> commands) {
+    private String getHelpMessage(List<ETBotCommand> commands) {
         String header = "I can help you to track your expanses:blush:\n\nYou can control me by sending these commands:\n\n";
         StringBuilder builder = new StringBuilder(header);
-        commands.stream().filter(BotCommand::addInHelpMessage).forEach(command -> {
+        commands.stream().filter(ETBotCommand::addInHelpMessage).forEach(command -> {
             builder.append(command);
             builder.append("\n");
         });

@@ -1,12 +1,16 @@
 package org.example.ExpenseTrackerBot.service;
 
 import com.vdurmont.emoji.EmojiParser;
+import org.example.ExpenseTrackerBot.commands.ETBotCommand;
 import org.example.ExpenseTrackerBot.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
+import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -25,6 +29,10 @@ public class BotService {
     public static final String DATE = "Date";
     public static final String CANCEL = "Cancel";
     public static final String BACK = "Back";
+    public static final String CURRENT_MONTH = "This month";
+    public static final String PREVIOUS_MONTH = "Previous month";
+    public static final String YTD = "YTD";
+    public static final String PREVIOUS_YEAR = "Previous year";
     private static final Logger log = LoggerFactory.getLogger(BotService.class);
 
     public static void sendMessage(AbsSender absSender, long chatId, String textToSend, InlineKeyboardMarkup keyboardMarkup) {
@@ -216,9 +224,39 @@ public class BotService {
         return keyboardMarkup;
     }
 
+    public static InlineKeyboardMarkup getReportMarkup(String markupIdentifier) {
+        String prefix = markupIdentifier + CALLBACK_DELIMITER;
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(InlineKeyboardButton.builder().text(CURRENT_MONTH).callbackData(prefix + CURRENT_MONTH).build());
+        row.add(InlineKeyboardButton.builder().text(PREVIOUS_MONTH).callbackData(prefix + PREVIOUS_MONTH).build());
+        keyboardRows.add(row);
+
+        row = new ArrayList<>();
+        row.add(InlineKeyboardButton.builder().text(YTD).callbackData(prefix + YTD).build());
+        row.add(InlineKeyboardButton.builder().text(PREVIOUS_YEAR).callbackData(prefix + PREVIOUS_YEAR).build());
+        keyboardRows.add(row);
+
+        keyboardMarkup.setKeyboard(keyboardRows);
+        return keyboardMarkup;
+    }
+
     public static ReplyKeyboardRemove getRemoveReplyKeyboard() {
         ReplyKeyboardRemove remove = new ReplyKeyboardRemove();
         remove.setRemoveKeyboard(true);
         return remove;
+    }
+
+    public static void setMyCommands (AbsSender absSender, List<ETBotCommand> myCommands) {
+        List<BotCommand> commands = new ArrayList<>();
+        myCommands.stream()
+                .filter(ETBotCommand::addInHelpMessage)
+                .forEach(command -> commands.add(new BotCommand(command.getCommandIdentifier(), command.getDescription())));
+        try {
+            absSender.execute(new SetMyCommands(commands, new BotCommandScopeDefault(), null));
+        } catch (TelegramApiException e) {
+            log.error("Error setting Bot command list: " + e.getMessage());
+        }
     }
 }

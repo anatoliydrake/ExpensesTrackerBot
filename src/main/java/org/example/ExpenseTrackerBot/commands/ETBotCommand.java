@@ -8,18 +8,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.bots.AbsSender;
 
-public abstract class BotCommand implements IBotCommand {
+public abstract class ETBotCommand implements IBotCommand {
     @Autowired
     protected ExpenseRepository expenseRepository;
     @Autowired
     protected UserRepository userRepository;
-    protected final Logger log = LoggerFactory.getLogger(BotCommand.class);
+    protected final Logger log = LoggerFactory.getLogger(ETBotCommand.class);
     public static final String COMMAND_INIT_CHARACTER = "/";
     private static final int COMMAND_MAX_LENGTH = 32;
     private final String commandIdentifier;
     private final String description;
 
-    public BotCommand(String commandIdentifier, String description) {
+    public ETBotCommand(String commandIdentifier, String description) {
         if (commandIdentifier != null && !commandIdentifier.isEmpty()) {
             if (commandIdentifier.startsWith(COMMAND_INIT_CHARACTER)) {
                 commandIdentifier = commandIdentifier.substring(1);

@@ -9,7 +9,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.bots.AbsSender;
 
 @Component
-public class AddCommand extends BotCommand {
+public class AddCommand extends ETBotCommand {
     public AddCommand() {
         super("add", "add new expense");
     }
@@ -17,7 +17,7 @@ public class AddCommand extends BotCommand {
     @Override
     public void execute(AbsSender absSender, Update update) {
         long chatId = update.getMessage().getChatId();
-        if (ExpenseTrackerBot.CURRENT_BOT_MESSAGE != null) {
+        if (ExpenseTrackerBot.CURRENT_BOT_MESSAGE != null) { // if there is unfinished flow
             BotService.deleteMessage(absSender, ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getChatId(), ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getMessageId());
         }
         BotService.sendMessage(absSender, chatId, "Please choose expense category", AddCategoryMarkup.MARKUP);

@@ -12,7 +12,7 @@ import org.telegram.telegrambots.meta.bots.AbsSender;
 import java.time.LocalDateTime;
 
 @Component
-public class StartCommand extends BotCommand {
+public class StartCommand extends ETBotCommand {
     public StartCommand() {
         super("start", "start bot");
     }
@@ -33,7 +33,7 @@ public class StartCommand extends BotCommand {
             log.info("New User saved: " + user);
         }
         BotService.sendMessage(absSender, chatId, EmojiParser.parseToUnicode(ExpenseTrackerBot.getHelpMessage()), null);
-        ExpenseTrackerBot.CURRENT_BOT_MESSAGE = null;
+        ExpenseTrackerBot.CURRENT_BOT_MESSAGE = null; // saves from delete message
     }
 
     @Override

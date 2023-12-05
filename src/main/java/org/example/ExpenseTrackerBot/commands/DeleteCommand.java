@@ -7,7 +7,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.bots.AbsSender;
 
 @Component
-public class DeleteCommand extends BotCommand {
+public class DeleteCommand extends ETBotCommand {
     public DeleteCommand() {
         super("delete", "delete a replied expense");
     }
