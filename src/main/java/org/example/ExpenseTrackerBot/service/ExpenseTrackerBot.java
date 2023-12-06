@@ -42,7 +42,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         markupMap = new HashMap<>();
         markups.forEach(c -> markupMap.put(c.getMarkupIdentifier(), c));
         HELP_MESSAGE = getHelpMessage(commands);
-        BotService.setMyCommands(this, commands);
+        BotUtils.setMyCommands(this, commands);
 
         currencySet = new HashSet<>();
         Arrays.stream(Currency.values()).forEach(c -> currencySet.add(c.name()));
@@ -60,7 +60,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
             Message replyMessage = message.getReplyToMessage();
             String reply = replyMessage == null ? "" : " as a reply to message " + replyMessage.getMessageId();
             log.info("Received message \"" + message.getText() + "\"" + reply + " from " + message.getChatId());
-            BotService.deleteMessage(this, message.getChatId(), message.getMessageId());
+            BotUtils.deleteMessage(this, message.getChatId(), message.getMessageId());
             if (message.isCommand()) {
                 processCommand(update);
             } else {
@@ -85,16 +85,16 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
                 textToSend = "Category: " + EXPENSE.getCategory()
                         + "\nCurrency: " + EXPENSE.getCurrency()
                         + "\nIncorrect input. Please, use numbers";
-                BotService.updateMessage(this, chatId, CURRENT_BOT_MESSAGE.getMessageId(), textToSend, null);
+                BotUtils.updateMessage(this, chatId, CURRENT_BOT_MESSAGE.getMessageId(), textToSend, null);
                 return;
             }
-            if (currencySet.contains(lastCallbackData)) { // if previous clicked button was currency
+            if (currencySet.contains(lastCallbackData)) { // if previous clicked button was currency in ADD process
                 addExpense(chatId, CURRENT_BOT_MESSAGE.getMessageId());
             }
-            if (lastCallbackData.equals(BotService.PRICE)) {
+            if (lastCallbackData.equals(BotUtils.PRICE)) { // if previous clicked button was price in UPDATE process
                 expenseRepository.save(EXPENSE);
-                textToSend = EXPENSE.getPrice() + " " + EXPENSE.getCurrency() + " on " + EXPENSE.getCategory();
-                BotService.updateMessage(this, chatId, CURRENT_BOT_MESSAGE.getMessageId(), textToSend, null);
+                textToSend = EXPENSE.getPrice() + " " + EXPENSE.getCurrency().getSymbol() + " on " + EXPENSE.getCategory().name();
+                BotUtils.updateMessage(this, chatId, CURRENT_BOT_MESSAGE.getMessageId(), textToSend, null);
             }
             CURRENT_BOT_MESSAGE = null;
         }
@@ -106,8 +106,8 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
             EXPENSE.setDate(LocalDate.now());
             EXPENSE.setMessageId(messageId);
             expenseRepository.save(EXPENSE);
-            BotService.updateMessage(this, chatId, messageId, EXPENSE.getPrice() + " "
-                    + EXPENSE.getCurrency() + " on " + EXPENSE.getCategory(), null);
+            BotUtils.updateMessage(this, chatId, messageId, EXPENSE.getPrice() + " "
+                    + EXPENSE.getCurrency().getSymbol() + " on " + EXPENSE.getCategory().name(), null);
             log.info("Added new " + EXPENSE);
             EXPENSE = null;
         }
@@ -131,7 +131,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
             long chatId = CURRENT_BOT_MESSAGE.getChatId();
             log.info("Clicked button \"" + lastCallbackData + "\" by " + chatId);
 
-            String[] tokens = lastCallbackData.split(BotService.CALLBACK_DELIMITER);
+            String[] tokens = lastCallbackData.split(BotUtils.CALLBACK_DELIMITER);
             String markupIdentifier = tokens[0];
             lastCallbackData = tokens[1];
             if (this.markupMap.containsKey(markupIdentifier)) {
@@ -141,29 +141,14 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
     }
 
     private String getHelpMessage(List<ETBotCommand> commands) {
-        String header = "I can help you to track your expanses:blush:\n\nYou can control me by sending these commands:\n\n";
+        String header = "I can help you to track your expenses\uD83D\uDE09\n\nYou can control me by sending these commands:\n";
         StringBuilder builder = new StringBuilder(header);
         commands.stream().filter(ETBotCommand::addInHelpMessage).forEach(command -> {
             builder.append(command);
             builder.append("\n");
         });
-        String categories = """
-                                
-                <b>Expense categories:</b>
-                :house::hotel: - rent
-                :bulb::potable_water: - utilities
-                :earth_americas:\uD83E\uDEAA - visa
-                \uD83E\uDEAA:runner: - visarun
-                :hospital::woman_health_worker: - healthcare
-                :airplane::taxi: - travel
-                :pizza::motor_scooter: - food delivery
-                :nail_care::hammer_and_wrench: - services
-                :shopping_cart::couple: - supermarket
-                :green_apple::leafy_green: - grocery
-                \uD83D\uDECD️:computer: - marketplace
-                :coffee:\uD83C\uDF7D️ - cafe""";
-        builder.append(categories);
-
+        builder.append("\n<b>Expense categories:</b>\n");
+        Arrays.stream(ExpenseCategory.values()).forEach(category -> builder.append(category).append("\n"));
         return builder.toString();
     }
 

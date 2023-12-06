@@ -1,7 +1,7 @@
 package org.example.ExpenseTrackerBot.commands;
 
 import org.example.ExpenseTrackerBot.model.Expense;
-import org.example.ExpenseTrackerBot.service.BotService;
+import org.example.ExpenseTrackerBot.service.BotUtils;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.bots.AbsSender;
@@ -22,7 +22,7 @@ public class DeleteCommand extends ETBotCommand {
                 log.error("Can't be deleted. Forwarded message " + messageId + " by user " + chatId + " doesn't contain an expense");
             } else {
                 expenseRepository.delete(expenseToDelete);
-                BotService.deleteMessage(absSender, chatId, messageId);
+                BotUtils.deleteMessage(absSender, chatId, messageId);
                 log.info("Deleted " + expenseToDelete);
             }
         }

@@ -1,7 +1,6 @@
 package org.example.ExpenseTrackerBot.markups;
 
 import org.example.ExpenseTrackerBot.model.ExpenseRepository;
-import org.example.ExpenseTrackerBot.model.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,8 +10,6 @@ import org.telegram.telegrambots.meta.bots.AbsSender;
 public abstract class BotMarkup {
     @Autowired
     protected ExpenseRepository expenseRepository;
-    @Autowired
-    protected UserRepository userRepository;
     protected Logger log;
     private final int IDENTIFIER_MAX_LENGTH = 32;
     private final String markupIdentifier;

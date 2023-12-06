@@ -1,6 +1,5 @@
 package org.example.ExpenseTrackerBot.service;
 
-import com.vdurmont.emoji.EmojiParser;
 import org.example.ExpenseTrackerBot.commands.ETBotCommand;
 import org.example.ExpenseTrackerBot.model.*;
 import org.slf4j.Logger;
@@ -21,7 +20,7 @@ import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BotService {
+public class BotUtils {
     public static final String CALLBACK_DELIMITER = ":";
     public static final String CATEGORY = "Category";
     public static final String CURRENCY = "Currency";
@@ -33,7 +32,7 @@ public class BotService {
     public static final String PREVIOUS_MONTH = "Previous month";
     public static final String YTD = "YTD";
     public static final String PREVIOUS_YEAR = "Previous year";
-    private static final Logger log = LoggerFactory.getLogger(BotService.class);
+    private static final Logger log = LoggerFactory.getLogger(BotUtils.class);
 
     public static void sendMessage(AbsSender absSender, long chatId, String textToSend, InlineKeyboardMarkup keyboardMarkup) {
         SendMessage message = SendMessage.builder()
@@ -79,51 +78,19 @@ public class BotService {
         String prefix = markupIdentifier + CALLBACK_DELIMITER;
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        //TODO button text getting from category enum / put emoji inside enum
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode(":house::hotel:"))
-                .callbackData(prefix + ExpenseCategory.RENT.name()).build());
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode(":bulb::potable_water:"))
-                .callbackData(prefix + ExpenseCategory.UTILITIES.name()).build());
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode(":earth_americas:\uD83E\uDEAA"))
-                .callbackData(prefix + ExpenseCategory.VISA.name()).build());
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode("\uD83E\uDEAA:runner:"))
-                .callbackData(prefix + ExpenseCategory.VISARUN.name()).build());
-        keyboardRows.add(row);
-
-        row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode(":hospital::woman_health_worker:"))
-                .callbackData(prefix + ExpenseCategory.HEALTH.name()).build());
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode(":airplane::taxi:"))
-                .callbackData(prefix + ExpenseCategory.TRAVEL.name()).build());
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode(":pizza::motor_scooter:"))
-                .callbackData(prefix + ExpenseCategory.FOOD_DELIVERY.name()).build());
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode(":nail_care::hammer_and_wrench:"))
-                .callbackData(prefix + ExpenseCategory.SERVICES.name()).build());
-        keyboardRows.add(row);
-
-        row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode(":shopping_cart::couple:"))
-                .callbackData(prefix + ExpenseCategory.SUPERMARKET.name()).build());
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode(":green_apple::leafy_green:"))
-                .callbackData(prefix + ExpenseCategory.GROCERY.name()).build());
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode("\uD83D\uDECD️:computer:"))
-                .callbackData(prefix + ExpenseCategory.MARKETPLACE.name()).build());
-        row.add(InlineKeyboardButton.builder()
-                .text(EmojiParser.parseToUnicode(":coffee:\uD83C\uDF7D️"))
-                .callbackData(prefix + ExpenseCategory.CAFE.name()).build());
-        keyboardRows.add(row);
+        List<InlineKeyboardButton> row;
+        ExpenseCategory[] categories = ExpenseCategory.values();
+        int rowNumber = 3;
+        int numberInRow = categories.length / rowNumber;
+        for (int i = 0; i < rowNumber; i++) {
+            row = new ArrayList<>();
+            for (int j = 0; j < numberInRow; j++) {
+                row.add(InlineKeyboardButton.builder()
+                        .text(categories[j + i * numberInRow].getEmoji())
+                        .callbackData(prefix + categories[j + i * numberInRow].name()).build());
+            }
+            keyboardRows.add(row);
+        }
 
         if (hasBackButton) {
             row = new ArrayList<>();

@@ -2,7 +2,7 @@ package org.example.ExpenseTrackerBot.markups;
 
 import org.example.ExpenseTrackerBot.model.Currency;
 import org.example.ExpenseTrackerBot.model.Expense;
-import org.example.ExpenseTrackerBot.service.BotService;
+import org.example.ExpenseTrackerBot.service.BotUtils;
 import org.example.ExpenseTrackerBot.service.ExpenseTrackerBot;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -18,7 +18,7 @@ import java.util.Set;
 public class AddCurrencyMarkup extends BotMarkup {
     private final Set<String> currencySet;
     private static final String MARKUP_IDENTIFIER = "Add currency";
-    public static final InlineKeyboardMarkup MARKUP = BotService.getCurrencyMarkup(MARKUP_IDENTIFIER, true);
+    public static final InlineKeyboardMarkup MARKUP = BotUtils.getCurrencyMarkup(MARKUP_IDENTIFIER, true);
 
     public AddCurrencyMarkup() {
         super(MARKUP_IDENTIFIER);
@@ -34,17 +34,17 @@ public class AddCurrencyMarkup extends BotMarkup {
         int messageId = message.getMessageId();
         Expense expense = ExpenseTrackerBot.EXPENSE;
         if (expense == null) {
-            BotService.deleteMessage(absSender, chatId, messageId);
+            BotUtils.deleteMessage(absSender, chatId, messageId);
             return;
         }
         String button = callback.substring(getMarkupIdentifier().length() + 1);
         if (currencySet.contains(button)) {
             String textToSend = "Category: " + expense.getCategory() + "\nCurrency: " + button + "\nPlease enter sum";
             expense.setCurrency(Currency.valueOf(button));
-            BotService.updateMessage(absSender, chatId, messageId, textToSend, AddPriceMarkup.MARKUP);
-        } else if (button.equals(BotService.BACK)) {
+            BotUtils.updateMessage(absSender, chatId, messageId, textToSend, AddPriceMarkup.MARKUP);
+        } else if (button.equals(BotUtils.BACK)) {
             String textToSend = "Please choose expense category";
-            BotService.updateMessage(absSender, chatId, messageId, textToSend, AddCategoryMarkup.MARKUP);
+            BotUtils.updateMessage(absSender, chatId, messageId, textToSend, AddCategoryMarkup.MARKUP);
         }
     }
 }

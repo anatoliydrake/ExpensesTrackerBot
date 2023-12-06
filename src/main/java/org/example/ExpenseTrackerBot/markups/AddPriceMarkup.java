@@ -1,7 +1,7 @@
 package org.example.ExpenseTrackerBot.markups;
 
 import org.example.ExpenseTrackerBot.model.Expense;
-import org.example.ExpenseTrackerBot.service.BotService;
+import org.example.ExpenseTrackerBot.service.BotUtils;
 import org.example.ExpenseTrackerBot.service.ExpenseTrackerBot;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -12,7 +12,7 @@ import org.telegram.telegrambots.meta.bots.AbsSender;
 @Component
 public class AddPriceMarkup extends BotMarkup {
     private static final String MARKUP_IDENTIFIER = "Add price";
-    public static final InlineKeyboardMarkup MARKUP = BotService.getPriceMarkup(MARKUP_IDENTIFIER);
+    public static final InlineKeyboardMarkup MARKUP = BotUtils.getPriceMarkup(MARKUP_IDENTIFIER);
     public AddPriceMarkup() {
         super(MARKUP_IDENTIFIER);
     }
@@ -25,13 +25,13 @@ public class AddPriceMarkup extends BotMarkup {
         int messageId = message.getMessageId();
         Expense expense = ExpenseTrackerBot.EXPENSE;
         if (expense == null) {
-            BotService.deleteMessage(absSender, chatId, messageId);
+            BotUtils.deleteMessage(absSender, chatId, messageId);
             return;
         }
         String button = callback.substring(getMarkupIdentifier().length() + 1);
-        if (button.equals(BotService.BACK)) {
+        if (button.equals(BotUtils.BACK)) {
             String textToSend = "Category: " + expense.getCategory() + "\nPlease choose currency";
-            BotService.updateMessage(absSender, chatId, messageId, textToSend, AddCurrencyMarkup.MARKUP);
+            BotUtils.updateMessage(absSender, chatId, messageId, textToSend, AddCurrencyMarkup.MARKUP);
         }
     }
 }

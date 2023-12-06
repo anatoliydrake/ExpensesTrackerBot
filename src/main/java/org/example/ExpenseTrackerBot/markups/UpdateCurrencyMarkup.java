@@ -2,7 +2,7 @@ package org.example.ExpenseTrackerBot.markups;
 
 import org.example.ExpenseTrackerBot.model.Currency;
 import org.example.ExpenseTrackerBot.model.Expense;
-import org.example.ExpenseTrackerBot.service.BotService;
+import org.example.ExpenseTrackerBot.service.BotUtils;
 import org.example.ExpenseTrackerBot.service.ExpenseTrackerBot;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -18,7 +18,7 @@ import java.util.Set;
 public class UpdateCurrencyMarkup extends BotMarkup {
     private final Set<String> currencySet;
     private static final String MARKUP_IDENTIFIER = "Update currency";
-    public static final InlineKeyboardMarkup MARKUP = BotService.getCurrencyMarkup(MARKUP_IDENTIFIER, true);
+    public static final InlineKeyboardMarkup MARKUP = BotUtils.getCurrencyMarkup(MARKUP_IDENTIFIER, true);
 
     public UpdateCurrencyMarkup() {
         super(MARKUP_IDENTIFIER);
@@ -35,17 +35,17 @@ public class UpdateCurrencyMarkup extends BotMarkup {
         Expense expense = ExpenseTrackerBot.EXPENSE;
         String[] lines = message.getText().split("\n");
         if (expense == null) {
-            BotService.updateMessage(absSender, chatId, messageId, lines[0], null);
+            BotUtils.updateMessage(absSender, chatId, messageId, lines[0], null);
             return;
         }
         String button = callback.substring(getMarkupIdentifier().length() + 1);
         if (currencySet.contains(button)) {
             expense.setCurrency(Currency.valueOf(button));
             expenseRepository.save(expense);
-            BotService.updateMessage(absSender, chatId, messageId, expense.getPrice() + " "
-                    + expense.getCurrency() + " on " + expense.getCategory(), null);
-        } else if (button.equals(BotService.BACK)) {
-            BotService.updateMessage(absSender, chatId, messageId, lines[0] + "\nChoose property to update", UpdatePropertyMarkup.MARKUP);
+            BotUtils.updateMessage(absSender, chatId, messageId, expense.getPrice() + " "
+                    + expense.getCurrency().getSymbol() + " on " + expense.getCategory().name(), null);
+        } else if (button.equals(BotUtils.BACK)) {
+            BotUtils.updateMessage(absSender, chatId, messageId, lines[0] + "\nChoose property to update", UpdatePropertyMarkup.MARKUP);
         }
     }
 }

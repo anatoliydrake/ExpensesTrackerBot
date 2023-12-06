@@ -1,8 +1,7 @@
 package org.example.ExpenseTrackerBot.commands;
 
-import com.vdurmont.emoji.EmojiParser;
 import org.example.ExpenseTrackerBot.model.User;
-import org.example.ExpenseTrackerBot.service.BotService;
+import org.example.ExpenseTrackerBot.service.BotUtils;
 import org.example.ExpenseTrackerBot.service.ExpenseTrackerBot;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Chat;
@@ -32,7 +31,7 @@ public class StartCommand extends ETBotCommand {
             userRepository.save(user);
             log.info("New User saved: " + user);
         }
-        BotService.sendMessage(absSender, chatId, EmojiParser.parseToUnicode(ExpenseTrackerBot.getHelpMessage()), null);
+        BotUtils.sendMessage(absSender, chatId, ExpenseTrackerBot.getHelpMessage(), null);
         ExpenseTrackerBot.CURRENT_BOT_MESSAGE = null; // saves from delete message
     }
 

@@ -2,7 +2,7 @@ package org.example.ExpenseTrackerBot.commands;
 
 import org.example.ExpenseTrackerBot.markups.AddCategoryMarkup;
 import org.example.ExpenseTrackerBot.model.Expense;
-import org.example.ExpenseTrackerBot.service.BotService;
+import org.example.ExpenseTrackerBot.service.BotUtils;
 import org.example.ExpenseTrackerBot.service.ExpenseTrackerBot;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -17,10 +17,10 @@ public class AddCommand extends ETBotCommand {
     @Override
     public void execute(AbsSender absSender, Update update) {
         long chatId = update.getMessage().getChatId();
-        if (ExpenseTrackerBot.CURRENT_BOT_MESSAGE != null) { // if there is unfinished flow
-            BotService.deleteMessage(absSender, ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getChatId(), ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getMessageId());
+        if (ExpenseTrackerBot.CURRENT_BOT_MESSAGE != null) { // if there is unfinished process
+            BotUtils.deleteMessage(absSender, ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getChatId(), ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getMessageId());
         }
-        BotService.sendMessage(absSender, chatId, "Please choose expense category", AddCategoryMarkup.MARKUP);
+        BotUtils.sendMessage(absSender, chatId, "Please choose expense category", AddCategoryMarkup.MARKUP);
         ExpenseTrackerBot.EXPENSE = new Expense();
     }
 }

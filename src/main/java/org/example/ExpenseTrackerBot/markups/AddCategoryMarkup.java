@@ -2,7 +2,7 @@ package org.example.ExpenseTrackerBot.markups;
 
 import org.example.ExpenseTrackerBot.model.Expense;
 import org.example.ExpenseTrackerBot.model.ExpenseCategory;
-import org.example.ExpenseTrackerBot.service.BotService;
+import org.example.ExpenseTrackerBot.service.BotUtils;
 import org.example.ExpenseTrackerBot.service.ExpenseTrackerBot;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -18,7 +18,7 @@ import java.util.Set;
 public class AddCategoryMarkup extends BotMarkup {
     private final Set<String> categorySet;
     private static final String MARKUP_IDENTIFIER = "Add category";
-    public static final InlineKeyboardMarkup MARKUP = BotService.getCategoryMarkup(MARKUP_IDENTIFIER, false);
+    public static final InlineKeyboardMarkup MARKUP = BotUtils.getCategoryMarkup(MARKUP_IDENTIFIER, false);
 
     public AddCategoryMarkup() {
         super(MARKUP_IDENTIFIER);
@@ -34,13 +34,13 @@ public class AddCategoryMarkup extends BotMarkup {
         int messageId = message.getMessageId();
         Expense expense = ExpenseTrackerBot.EXPENSE;
         if (expense == null) {
-            BotService.deleteMessage(absSender, chatId, messageId);
+            BotUtils.deleteMessage(absSender, chatId, messageId);
             return;
         }
         String category = callback.substring(getMarkupIdentifier().length() + 1);
         if (categorySet.contains(category)) {
             String textToSend = "Category: " + category + "\nPlease choose currency";
-            BotService.updateMessage(absSender, chatId, messageId, textToSend, AddCurrencyMarkup.MARKUP);
+            BotUtils.updateMessage(absSender, chatId, messageId, textToSend, AddCurrencyMarkup.MARKUP);
             expense.setCategory(ExpenseCategory.valueOf(category));
         }
     }
