@@ -17,10 +17,12 @@ import org.telegram.telegrambots.meta.bots.AbsSender;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.Month;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
-public class BotUtils {
+public final class BotUtils {
     public static final String CALLBACK_DELIMITER = ":";
     public static final String CATEGORY = "Category";
     public static final String CURRENCY = "Currency";
@@ -33,6 +35,8 @@ public class BotUtils {
     public static final String YTD = "YTD";
     public static final String PREVIOUS_YEAR = "Previous year";
     private static final Logger log = LoggerFactory.getLogger(BotUtils.class);
+
+    private BotUtils(){}
 
     public static void sendMessage(AbsSender absSender, long chatId, String textToSend, InlineKeyboardMarkup keyboardMarkup) {
         SendMessage message = SendMessage.builder()
@@ -175,7 +179,7 @@ public class BotUtils {
             row = new ArrayList<>();
             for (int j = 0; j < monthInRowCount; j++) {
                 row.add(InlineKeyboardButton.builder()
-                        .text(months[j + i * monthInRowCount].name().substring(0, 3))
+                        .text(months[j + i * monthInRowCount].getDisplayName(TextStyle.SHORT, Locale.ENGLISH))
                         .callbackData(prefix + months[j + i * monthInRowCount]).build());
             }
             keyboardRows.add(row);

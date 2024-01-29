@@ -39,7 +39,8 @@ public class ReportMarkup extends BotMarkup {
         String textToSend = "";
         switch (button) {
             case BotUtils.CURRENT_MONTH -> textToSend = getMonthReport(chatId, month, year);
-            case BotUtils.PREVIOUS_MONTH -> textToSend = getMonthReport(chatId, month.minus(1), year);
+            case BotUtils.PREVIOUS_MONTH -> textToSend = getMonthReport(chatId, month.minus(1),
+                    today.minusMonths(1).getYear());
             case BotUtils.YTD -> textToSend = getYearReport(chatId, year);
             case BotUtils.PREVIOUS_YEAR -> textToSend = getYearReport(chatId, year - 1);
         }
@@ -56,7 +57,8 @@ public class ReportMarkup extends BotMarkup {
         if (expenses.isEmpty()) {
             return "<b>No expenses in " + month + "</b>";
         } else {
-            StringBuilder builder = new StringBuilder("<b>Expenses in " + month.getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + year + "</b>\n<i>");
+            StringBuilder builder = new StringBuilder("<b>Expenses in " +
+                    month.getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + year + "</b>\n<i>");
             String category = "";
             for (Object[] expense : expenses) {
                 expenseCategory = (ExpenseCategory) expense[0];
@@ -96,8 +98,12 @@ public class ReportMarkup extends BotMarkup {
                 if (month == (int) expense[0]) {
                     builder.append(" + ").append(expense[1]).append(" ").append(currency.getSymbol());
                 } else {
-                    builder.append("\n").append(Month.of((int) expense[0]).getDisplayName(TextStyle.FULL, Locale.ENGLISH)).append(": ")
-                            .append(expense[1]).append(" ").append(currency.getSymbol());
+                    builder.append("\n")
+                            .append(Month.of((int) expense[0]).getDisplayName(TextStyle.FULL, Locale.ENGLISH))
+                            .append(": ")
+                            .append(expense[1])
+                            .append(" ")
+                            .append(currency.getSymbol());
                 }
                 month = (int) expense[0];
             }

@@ -43,9 +43,10 @@ public class UpdateCategoryMarkup extends BotMarkup {
             expense.setCategory(ExpenseCategory.valueOf(button));
             expenseRepository.save(expense);
             BotUtils.updateMessage(absSender, chatId, messageId, expense.getPrice() + " "
-                    + expense.getCurrency() + " on " + expense.getCategory(), null);
+                    + expense.getCurrency() + " on " + expense.getCategory().name(), null);
         } else if (button.equals(BotUtils.BACK)) {
-            BotUtils.updateMessage(absSender, chatId, messageId, lines[0] + "\nChoose property to update", UpdatePropertyMarkup.MARKUP);
+            BotUtils.updateMessage(absSender, chatId, messageId, lines[0] +
+                    "\nChoose property to update", UpdatePropertyMarkup.MARKUP);
         }
     }
 }
