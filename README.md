@@ -57,7 +57,7 @@ description: >-
 3. The bot queries the user for the amount of money paid.
 4. Finally, the message is transformed into an expense note.
 
-<img src=".gitbook/assets/IMG_4449.PNG" alt="" data-size="original"> ![](.gitbook/assets/IMG\_4450.PNG) ![](.gitbook/assets/IMG\_4451.PNG) ![](.gitbook/assets/IMG\_4452.PNG)
+![](.gitbook/assets/Add.jpg)
 
 
 
@@ -72,7 +72,7 @@ description: >-
 3. The bot queries the user for new value.
 4. Finally, the message with an expense note is corrected.
 
-![](.gitbook/assets/IMG\_4469.PNG) ![](.gitbook/assets/IMG\_4470.PNG) ![](.gitbook/assets/IMG\_4472.PNG) ![](.gitbook/assets/IMG\_4473.PNG)
+![](.gitbook/assets/Update.jpg)
 
 </details>
 
@@ -83,7 +83,7 @@ description: >-
 1. The user replied to an expense note by sending the <mark style="color:blue;">/delete</mark> command,&#x20;
 2. The bot removes it from the database and delete expense note from chat.
 
-![](.gitbook/assets/IMG\_4466.PNG) ![](.gitbook/assets/IMG\_4468.PNG)
+![](.gitbook/assets/Delete.jpg)
 
 </details>
 
@@ -94,6 +94,6 @@ description: >-
 1. After the user sent the <mark style="color:blue;">/report</mark> command, the bot responds with the reports menu and prompts the user to choose one out of four types.
 2. Finally, the message is transformed into the choosen type of report.
 
-![](.gitbook/assets/IMG\_4479.PNG) ![](.gitbook/assets/IMG\_4482.PNG)
+![](.gitbook/assets/Report.jpg)
 
 </details>
