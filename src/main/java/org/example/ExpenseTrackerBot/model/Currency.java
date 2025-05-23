@@ -2,7 +2,8 @@ package org.example.ExpenseTrackerBot.model;
 
 public enum Currency {
     VND('₫'),
-    USD('$');
+    USD('$'),
+    RUR('₽');
 
     private final char symbol;
 

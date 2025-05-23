@@ -17,11 +17,14 @@ public class DeleteCommand extends ETBotCommand {
     @Override
     public void execute(AbsSender absSender, Update update) {
         long chatId = update.getMessage().getChat().getId();
-        if (update.getMessage().getReplyToMessage() != null) {
+        boolean hasReplyMessage = update.getMessage().getReplyToMessage() != null;
+        if (hasReplyMessage) {
             int messageId = update.getMessage().getReplyToMessage().getMessageId();
             Optional<Expense> optionalExpense = expenseRepository.findByUserIdAndMessageId(chatId, messageId);
             if (optionalExpense.isEmpty()) {
-                log.error("Can't be deleted. Forwarded message " + messageId + " by user " + chatId + " doesn't contain an expense");
+                log.error("Can't be deleted. Forwarded message " + messageId +
+                        " by user " + chatId +
+                        " doesn't contain an expense");
             } else {
                 Expense expenseToDelete = optionalExpense.get();
                 expenseRepository.delete(expenseToDelete);

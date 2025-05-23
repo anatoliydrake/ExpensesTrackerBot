@@ -4,6 +4,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.bots.AbsSender;
 
 public interface IBotCommand {
+    String COMMAND_INIT_CHARACTER = "/";
+
     String getCommandIdentifier();
 
     String getDescription();

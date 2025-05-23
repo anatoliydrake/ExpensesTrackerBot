@@ -1,6 +1,6 @@
 package org.example.ExpenseTrackerBot.service;
 
-import org.example.ExpenseTrackerBot.commands.ETBotCommand;
+import org.example.ExpenseTrackerBot.commands.IBotCommand;
 import org.example.ExpenseTrackerBot.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,11 +54,12 @@ public final class BotUtils {
     }
 
     public static void updateMessage(AbsSender absSender, long chatId, int messageId, String textToSend, InlineKeyboardMarkup keyboardMarkup) {
-        EditMessageText newMessage = new EditMessageText();
-        newMessage.setChatId(chatId);
-        newMessage.setMessageId(messageId);
-        newMessage.setText(textToSend);
-        newMessage.setReplyMarkup(keyboardMarkup);
+        EditMessageText newMessage = EditMessageText.builder()
+                .chatId(chatId)
+                .messageId(messageId)
+                .text(textToSend)
+                .replyMarkup(keyboardMarkup)
+                .build();
         try {
             absSender.execute(newMessage);
         } catch (TelegramApiException e) {
@@ -67,11 +68,13 @@ public final class BotUtils {
     }
 
     public static void deleteMessage(AbsSender absSender, long chatId, int messageId) {
-        DeleteMessage deleteMessage = new DeleteMessage();
-        deleteMessage.setChatId(chatId);
-        deleteMessage.setMessageId(messageId);
+        DeleteMessage deleteMessage = DeleteMessage.builder()
+                .chatId(chatId)
+                .messageId(messageId)
+                .build();
         try {
             absSender.execute(deleteMessage);
+            log.info("DELETED message " + messageId + " in chat " + chatId);
         } catch (TelegramApiException e) {
             updateMessage(absSender, chatId, messageId, "DELETED", null);
             log.error(e.getMessage());
@@ -113,8 +116,18 @@ public final class BotUtils {
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder().text(Currency.VND.name()).callbackData(prefix + Currency.VND.name()).build());
-        row.add(InlineKeyboardButton.builder().text(Currency.USD.name()).callbackData(prefix + Currency.USD.name()).build());
+        Currency[] currencies = Currency.values();
+        int maxNumberInRow = 4;
+        for (int i = 0; i < currencies.length; i++) {
+            row.add(InlineKeyboardButton.builder()
+                    .text(currencies[i].name())
+                    .callbackData(prefix + currencies[i].name())
+                    .build());
+            if ((i + 1) % maxNumberInRow == 0) {
+                keyboardRows.add(row);
+                row = new ArrayList<>();
+            }
+        }
         keyboardRows.add(row);
 
         if (hasBackButton) {
@@ -219,10 +232,10 @@ public final class BotUtils {
         return remove;
     }
 
-    public static void setMyCommands (AbsSender absSender, List<ETBotCommand> myCommands) {
+    public static void setMyCommands (AbsSender absSender, List<IBotCommand> myCommands) {
         List<BotCommand> commands = new ArrayList<>();
         myCommands.stream()
-                .filter(ETBotCommand::addInHelpMessage)
+                .filter(IBotCommand::addInHelpMessage)
                 .forEach(command -> commands.add(new BotCommand(command.getCommandIdentifier(), command.getDescription())));
         try {
             absSender.execute(new SetMyCommands(commands, new BotCommandScopeDefault(), null));

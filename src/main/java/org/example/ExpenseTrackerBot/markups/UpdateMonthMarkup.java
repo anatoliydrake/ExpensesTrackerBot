@@ -36,8 +36,10 @@ public class UpdateMonthMarkup extends BotMarkup {
         int messageId = message.getMessageId();
         Expense expense = ExpenseTrackerBot.EXPENSE;
         String[] lines = message.getText().split("\n");
-        if (expense == null) {
-            BotUtils.updateMessage(absSender, chatId, messageId, lines[0], null);
+        String expenseRecord = lines[0];
+        boolean isCallbackFromInterruptedProcess = expense == null;
+        if (isCallbackFromInterruptedProcess) {
+            BotUtils.updateMessage(absSender, chatId, messageId, expenseRecord, null);
             return;
         }
         String button = callback.substring(getMarkupIdentifier().length() + 1);
@@ -47,9 +49,11 @@ public class UpdateMonthMarkup extends BotMarkup {
             expense.setDate(expense.getDate().minusMonths((oldMonth - newMonth + 12) % 12));
             expenseRepository.save(expense);
             String dateToText = " in " + expense.getDate().getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-            BotUtils.updateMessage(absSender, chatId, messageId, lines[0] + dateToText, null);
+            BotUtils.updateMessage(absSender, chatId, messageId,
+                    expenseRecord + dateToText, null);
         } else if (button.equals(BotUtils.BACK)) {
-            BotUtils.updateMessage(absSender, chatId, messageId, lines[0] + "\nChoose property to update", UpdatePropertyMarkup.MARKUP);
+            BotUtils.updateMessage(absSender, chatId, messageId,
+                    expenseRecord + "\nChoose property to update", UpdatePropertyMarkup.MARKUP);
         }
     }
 }

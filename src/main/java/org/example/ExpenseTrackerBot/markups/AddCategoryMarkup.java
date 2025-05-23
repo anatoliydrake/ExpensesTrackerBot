@@ -33,7 +33,8 @@ public class AddCategoryMarkup extends BotMarkup {
         long chatId = message.getChatId();
         int messageId = message.getMessageId();
         Expense expense = ExpenseTrackerBot.EXPENSE;
-        if (expense == null) {
+        boolean isCallbackFromInterruptedProcess = expense == null;
+        if (isCallbackFromInterruptedProcess) {
             BotUtils.deleteMessage(absSender, chatId, messageId);
             return;
         }

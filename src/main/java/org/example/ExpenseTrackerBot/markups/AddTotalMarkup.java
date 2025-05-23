@@ -10,10 +10,10 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.bots.AbsSender;
 
 @Component
-public class AddPriceMarkup extends BotMarkup {
-    private static final String MARKUP_IDENTIFIER = "Add price";
+public class AddTotalMarkup extends BotMarkup {
+    private static final String MARKUP_IDENTIFIER = "Add total";
     public static final InlineKeyboardMarkup MARKUP = BotUtils.getPriceMarkup(MARKUP_IDENTIFIER);
-    public AddPriceMarkup() {
+    public AddTotalMarkup() {
         super(MARKUP_IDENTIFIER);
     }
 
@@ -24,7 +24,8 @@ public class AddPriceMarkup extends BotMarkup {
         long chatId = message.getChatId();
         int messageId = message.getMessageId();
         Expense expense = ExpenseTrackerBot.EXPENSE;
-        if (expense == null) {
+        boolean isCallbackFromInterruptedProcess = expense == null;
+        if (isCallbackFromInterruptedProcess) {
             BotUtils.deleteMessage(absSender, chatId, messageId);
             return;
         }

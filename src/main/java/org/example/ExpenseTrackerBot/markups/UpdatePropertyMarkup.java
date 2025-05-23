@@ -24,21 +24,28 @@ public class UpdatePropertyMarkup extends BotMarkup {
         long chatId = message.getChatId();
         int messageId = message.getMessageId();
         String[] lines = message.getText().split("\n");
-        if (ExpenseTrackerBot.EXPENSE == null) {
-            BotUtils.updateMessage(absSender, chatId, messageId, lines[0], null);
+        String expenseRecord = lines[0];
+        boolean isCallbackFromInterruptedProcess = ExpenseTrackerBot.EXPENSE == null;
+        if (isCallbackFromInterruptedProcess) {
+            BotUtils.updateMessage(absSender, chatId, messageId, expenseRecord, null);
             return;
         }
         String button = callback.substring(getMarkupIdentifier().length() + 1);
         switch (button) {
             case BotUtils.CATEGORY ->
-                    BotUtils.updateMessage(absSender, chatId, messageId, lines[0] + "\nPlease choose expense category", UpdateCategoryMarkup.MARKUP);
+                    BotUtils.updateMessage(absSender, chatId, messageId,
+                            expenseRecord + "\nPlease choose new category", UpdateCategoryMarkup.MARKUP);
             case BotUtils.CURRENCY ->
-                    BotUtils.updateMessage(absSender, chatId, messageId, lines[0] + "\nPlease choose currency", UpdateCurrencyMarkup.MARKUP);
+                    BotUtils.updateMessage(absSender, chatId, messageId,
+                            expenseRecord + "\nPlease choose new currency", UpdateCurrencyMarkup.MARKUP);
             case BotUtils.PRICE ->
-                    BotUtils.updateMessage(absSender, chatId, messageId, lines[0] + "\nPlease enter sum", null);
+                    BotUtils.updateMessage(absSender, chatId, messageId,
+                            expenseRecord + "\nPlease enter new total", UpdateTotalMarkup.MARKUP);
             case BotUtils.DATE ->
-                    BotUtils.updateMessage(absSender, chatId, messageId, lines[0] + "\nPlease choose month", UpdateMonthMarkup.MARKUP);
-            case BotUtils.CANCEL -> BotUtils.updateMessage(absSender, chatId, messageId, lines[0], null);
+                    BotUtils.updateMessage(absSender, chatId, messageId,
+                            expenseRecord + "\nPlease choose new period", UpdateMonthMarkup.MARKUP);
+            case BotUtils.CANCEL -> BotUtils.updateMessage(absSender, chatId, messageId,
+                    expenseRecord, null);
         }
     }
 }

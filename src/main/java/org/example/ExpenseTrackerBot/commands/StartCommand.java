@@ -20,7 +20,8 @@ public class StartCommand extends ETBotCommand {
     public void execute(AbsSender absSender, Update update) {
         Chat chat = update.getMessage().getChat();
         long chatId = chat.getId();
-        if (userRepository.findById(chatId).isEmpty()) {
+        boolean isUserNew = userRepository.findById(chatId).isEmpty();
+        if (isUserNew) {
             User user = new User();
             user.setId(chatId);
             user.setFirstName(chat.getFirstName());
@@ -32,7 +33,7 @@ public class StartCommand extends ETBotCommand {
             log.info("New User saved: " + user);
         }
         BotUtils.sendMessage(absSender, chatId, ExpenseTrackerBot.getHelpMessage(), null);
-        ExpenseTrackerBot.CURRENT_BOT_MESSAGE = null; // saves from delete message
+        ExpenseTrackerBot.CURRENT_BOT_MESSAGE = null; // saves message from delete
     }
 
     @Override

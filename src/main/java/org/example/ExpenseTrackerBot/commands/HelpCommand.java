@@ -15,10 +15,12 @@ public class HelpCommand extends ETBotCommand {
     @Override
     public void execute(AbsSender absSender, Update update) {
         long chatId = update.getMessage().getChat().getId();
-        if (ExpenseTrackerBot.CURRENT_BOT_MESSAGE != null) { // if there is unfinished process
-            BotUtils.deleteMessage(absSender, ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getChatId(), ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getMessageId());
+        boolean isSomeCommandProcessStarted = ExpenseTrackerBot.CURRENT_BOT_MESSAGE != null;
+        if (isSomeCommandProcessStarted) {
+            BotUtils.deleteMessage(absSender, ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getChatId(),
+                    ExpenseTrackerBot.CURRENT_BOT_MESSAGE.getMessageId());
         }
         BotUtils.sendMessage(absSender, chatId, ExpenseTrackerBot.getHelpMessage(), null);
-        ExpenseTrackerBot.CURRENT_BOT_MESSAGE = null; // saves from delete message
+        ExpenseTrackerBot.CURRENT_BOT_MESSAGE = null; // saves message from delete
     }
 }

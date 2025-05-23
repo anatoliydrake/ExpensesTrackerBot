@@ -19,12 +19,14 @@ public class UpdateCommand extends ETBotCommand {
     @Override
     public void execute(AbsSender absSender, Update update) {
         long chatId = update.getMessage().getChat().getId();
-        if (update.getMessage().getReplyToMessage() != null) {
+        boolean hasReplyMessage = update.getMessage().getReplyToMessage() != null;
+        if (hasReplyMessage) {
             int expenseMessageId = update.getMessage().getReplyToMessage().getMessageId();
             Optional<Expense> optionalExpense = expenseRepository.findByUserIdAndMessageId(chatId, expenseMessageId);
             if (optionalExpense.isEmpty()) {
                 log.error("Can't be updated. Forwarded message " + expenseMessageId +
-                        " by user " + chatId + " doesn't contain an expense");
+                        " by user " + chatId +
+                        " doesn't contain an expense");
             } else {
                 ExpenseTrackerBot.EXPENSE = optionalExpense.get();
                 String messageText = update.getMessage().getReplyToMessage().getText();

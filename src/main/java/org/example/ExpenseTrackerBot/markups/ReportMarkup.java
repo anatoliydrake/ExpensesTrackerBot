@@ -13,6 +13,7 @@ import org.telegram.telegrambots.meta.bots.AbsSender;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.format.TextStyle;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
@@ -47,7 +48,7 @@ public class ReportMarkup extends BotMarkup {
         if (!textToSend.isEmpty()) {
             BotUtils.sendMessage(absSender, chatId, textToSend, null);
         }
-        ExpenseTrackerBot.CURRENT_BOT_MESSAGE = null;
+        ExpenseTrackerBot.CURRENT_BOT_MESSAGE = null; // saves message from delete
     }
 
     private String getMonthReport(long userId, Month month, int year) {
@@ -63,22 +64,35 @@ public class ReportMarkup extends BotMarkup {
             for (Object[] expense : expenses) {
                 expenseCategory = (ExpenseCategory) expense[0];
                 expenseCurrency = (Currency) expense[2];
-                if (category.equals(expenseCategory.name())) {
-                    builder.append(" + ").append(expense[1])
-                            .append(" ").append(expenseCurrency.getSymbol());
+                boolean hasCategoryDifferentCurrency = category.equals(expenseCategory.name());
+                if (hasCategoryDifferentCurrency) {
+                    builder.append(" + ")
+                            .append(expense[1])
+                            .append(" ")
+                            .append(expenseCurrency.getSymbol());
                 } else {
-                    builder.append("\n").append(expenseCategory.getEmoji()).append(": ")
-                            .append(expense[1]).append(" ").append(expenseCurrency.getSymbol());
+                    builder.append("\n")
+                            .append(expenseCategory.getEmoji())
+                            .append(": ")
+                            .append(expense[1])
+                            .append(" ")
+                            .append(expenseCurrency.getSymbol());
                 }
                 category = expenseCategory.name();
             }
             expenses = expenseRepository.getTotalMonthReport(userId, year, month.getValue());
-            expenseCurrency = (Currency) expenses.get(0)[1];
             builder.append("\n\nTotal:");
-            builder.append(" ").append(expenses.get(0)[0]).append(" ").append(expenseCurrency.getSymbol());
-            if (expenses.size() > 1) {
-                expenseCurrency = (Currency) expenses.get(1)[1];
-                builder.append(" + ").append(expenses.get(1)[0]).append(" ").append(expenseCurrency.getSymbol());
+            Iterator<Object[]> iterator = expenses.iterator();
+            while (iterator.hasNext()) {
+                Object[] expense = iterator.next();
+                expenseCurrency = (Currency) expense[1];
+                builder.append(" ")
+                        .append(expense[0])
+                        .append(" ")
+                        .append(expenseCurrency.getSymbol());
+                if (iterator.hasNext()) {
+                    builder.append(" +");
+                }
             }
             builder.append("</i>");
             return builder.toString();
@@ -95,8 +109,12 @@ public class ReportMarkup extends BotMarkup {
             int month = -1;
             for (Object[] expense : expenses) {
                 currency = (Currency) expense[2];
-                if (month == (int) expense[0]) {
-                    builder.append(" + ").append(expense[1]).append(" ").append(currency.getSymbol());
+                boolean hasMonthDifferentCurrency = month == (int) expense[0];
+                if (hasMonthDifferentCurrency) {
+                    builder.append(" + ")
+                            .append(expense[1])
+                            .append(" ")
+                            .append(currency.getSymbol());
                 } else {
                     builder.append("\n")
                             .append(Month.of((int) expense[0]).getDisplayName(TextStyle.FULL, Locale.ENGLISH))

@@ -33,7 +33,8 @@ public class AddCurrencyMarkup extends BotMarkup {
         long chatId = message.getChatId();
         int messageId = message.getMessageId();
         Expense expense = ExpenseTrackerBot.EXPENSE;
-        if (expense == null) {
+        boolean isCallbackFromInterruptedProcess = expense == null;
+        if (isCallbackFromInterruptedProcess) {
             BotUtils.deleteMessage(absSender, chatId, messageId);
             return;
         }
@@ -41,7 +42,7 @@ public class AddCurrencyMarkup extends BotMarkup {
         if (currencySet.contains(button)) {
             String textToSend = "Category: " + expense.getCategory() + "\nCurrency: " + button + "\nPlease enter sum";
             expense.setCurrency(Currency.valueOf(button));
-            BotUtils.updateMessage(absSender, chatId, messageId, textToSend, AddPriceMarkup.MARKUP);
+            BotUtils.updateMessage(absSender, chatId, messageId, textToSend, AddTotalMarkup.MARKUP);
         } else if (button.equals(BotUtils.BACK)) {
             String textToSend = "Please choose expense category";
             BotUtils.updateMessage(absSender, chatId, messageId, textToSend, AddCategoryMarkup.MARKUP);

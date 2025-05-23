@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
-    @Query("SELECT e FROM Expenses e WHERE e.user.id = :userId and e.messageId = :messageId")
     Optional<Expense> findByUserIdAndMessageId(long userId, int messageId);
 
     @Query("SELECT e.category, SUM(e.price), currency " +

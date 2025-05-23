@@ -1,6 +1,6 @@
 package org.example.ExpenseTrackerBot.service;
 
-import org.example.ExpenseTrackerBot.commands.ETBotCommand;
+import org.example.ExpenseTrackerBot.commands.IBotCommand;
 import org.example.ExpenseTrackerBot.config.BotConfig;
 import org.example.ExpenseTrackerBot.markups.BotMarkup;
 import org.example.ExpenseTrackerBot.model.*;
@@ -8,7 +8,6 @@ import org.example.ExpenseTrackerBot.model.Currency;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -18,7 +17,6 @@ import java.time.LocalDate;
 import java.util.*;
 
 @Component
-@Scope(value = "singleton")
 public class ExpenseTrackerBot extends TelegramLongPollingBot {
     public static Expense EXPENSE;
     public static Message CURRENT_BOT_MESSAGE;
@@ -28,13 +26,13 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
     @Autowired
     private UserRepository userRepository;
     private final BotConfig config;
-    private final Map<String, ETBotCommand> commandMap;
+    private final Map<String, IBotCommand> commandMap;
     private final Map<String, BotMarkup> markupMap;
     private final Set<String> currencySet;
     private static final Logger log = LoggerFactory.getLogger(ExpenseTrackerBot.class);
     private String lastCallbackData;
 
-    public ExpenseTrackerBot(BotConfig config, List<ETBotCommand> commands, List<BotMarkup> markups) {
+    public ExpenseTrackerBot(BotConfig config, List<IBotCommand> commands, List<BotMarkup> markups) {
         super(config.getBotToken());
         this.config = config;
         commandMap = new HashMap<>();
@@ -59,7 +57,8 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
             Message message = update.getMessage();
             Message replyMessage = message.getReplyToMessage();
             String reply = replyMessage == null ? "" : " as a reply to message " + replyMessage.getMessageId();
-            log.info("Received message \"" + message.getText() + "\"" + reply + " from " + message.getChatId());
+            log.info("Received message " + message.getMessageId() + ": \"" + message.getText() + "\"" + reply +
+                    " from " + message.getChatId());
             BotUtils.deleteMessage(this, message.getChatId(), message.getMessageId());
             if (message.isCommand()) {
                 processCommand(update);
@@ -76,7 +75,8 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
     }
 
     private void processUserTextMessage(String msgText, long chatId) {
-        if (EXPENSE != null && CURRENT_BOT_MESSAGE != null) {
+        boolean isSomeProcessStarted = EXPENSE != null && CURRENT_BOT_MESSAGE != null;
+        if (isSomeProcessStarted) {
             String textToSend;
             try {
                 EXPENSE.setPrice(Double.parseDouble(msgText));
@@ -85,18 +85,27 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
                 textToSend = "Category: " + EXPENSE.getCategory()
                         + "\nCurrency: " + EXPENSE.getCurrency()
                         + "\nIncorrect input. Please, use numbers";
-                BotUtils.updateMessage(this, chatId, CURRENT_BOT_MESSAGE.getMessageId(), textToSend, null);
+                BotUtils.updateMessage(this, chatId, CURRENT_BOT_MESSAGE.getMessageId(),
+                        textToSend, null);
                 return;
             }
-            if (currencySet.contains(lastCallbackData)) { // if previous clicked button was currency in ADD process
+
+            boolean isAddCurrencyButtonClicked = currencySet.contains(lastCallbackData);
+            if (isAddCurrencyButtonClicked) {
                 addExpense(chatId, CURRENT_BOT_MESSAGE.getMessageId());
+                CURRENT_BOT_MESSAGE = null; // saves message from delete
+                return;
             }
-            if (lastCallbackData.equals(BotUtils.PRICE)) { // if previous clicked button was price in UPDATE process
+
+            boolean isUpdatePriceButtonClicked = lastCallbackData.equals(BotUtils.PRICE);
+            if (isUpdatePriceButtonClicked) {
                 expenseRepository.save(EXPENSE);
-                textToSend = EXPENSE.getPrice() + " " + EXPENSE.getCurrency().getSymbol() + " on " + EXPENSE.getCategory().name();
-                BotUtils.updateMessage(this, chatId, CURRENT_BOT_MESSAGE.getMessageId(), textToSend, null);
+                textToSend = EXPENSE.getPrice() + " " + EXPENSE.getCurrency().getSymbol() + " on " +
+                        EXPENSE.getCategory().name();
+                BotUtils.updateMessage(this, chatId, CURRENT_BOT_MESSAGE.getMessageId(),
+                        textToSend, null);
+                CURRENT_BOT_MESSAGE = null; // saves message from delete
             }
-            CURRENT_BOT_MESSAGE = null;
         }
     }
 
@@ -116,7 +125,7 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
     private void processCommand(Update update) {
         Message message = update.getMessage();
         String text = message.getText();
-        if (text.startsWith(ETBotCommand.COMMAND_INIT_CHARACTER)) {
+        if (text.startsWith(IBotCommand.COMMAND_INIT_CHARACTER)) {
             String command = text.substring(1);
             if (this.commandMap.containsKey(command)) {
                 this.commandMap.get(command).processMessage(this, update);
@@ -140,10 +149,14 @@ public class ExpenseTrackerBot extends TelegramLongPollingBot {
         }
     }
 
-    private String getHelpMessage(List<ETBotCommand> commands) {
-        String header = "I can help you to track your expenses\uD83D\uDE09\n\nYou can control me by sending these commands:\n";
+    private String getHelpMessage(List<IBotCommand> commands) {
+        String header = """
+                I can help you to track your expenses\uD83D\uDE09
+
+                You can control me by sending these commands:
+                """;
         StringBuilder builder = new StringBuilder(header);
-        commands.stream().filter(ETBotCommand::addInHelpMessage).forEach(command -> {
+        commands.stream().filter(IBotCommand::addInHelpMessage).forEach(command -> {
             builder.append(command);
             builder.append("\n");
         });

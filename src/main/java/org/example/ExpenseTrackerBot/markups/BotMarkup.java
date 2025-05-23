@@ -31,9 +31,9 @@ public abstract class BotMarkup {
         return this.markupIdentifier;
     }
 
-    public void processCallback(AbsSender absSender, Update update) {
+    public final void processCallback(AbsSender absSender, Update update) {
         this.execute(absSender, update);
     }
 
-    public abstract void execute(AbsSender absSender, Update update);
+    protected abstract void execute(AbsSender absSender, Update update);
 }

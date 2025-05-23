@@ -14,7 +14,6 @@ public abstract class ETBotCommand implements IBotCommand {
     @Autowired
     protected UserRepository userRepository;
     protected final Logger log = LoggerFactory.getLogger(ETBotCommand.class);
-    public static final String COMMAND_INIT_CHARACTER = "/";
     private static final int COMMAND_MAX_LENGTH = 32;
     private final String commandIdentifier;
     private final String description;
@@ -48,9 +47,9 @@ public abstract class ETBotCommand implements IBotCommand {
         return "/" + this.getCommandIdentifier() + " - " + this.getDescription();
     }
 
-    public void processMessage(AbsSender absSender, Update update) {
+    public final void processMessage(AbsSender absSender, Update update) {
         this.execute(absSender, update);
     }
 
-    public abstract void execute(AbsSender absSender, Update update);
+    protected abstract void execute(AbsSender absSender, Update update);
 }
